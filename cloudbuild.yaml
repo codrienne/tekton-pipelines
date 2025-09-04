@@ -14,7 +14,7 @@ steps:
     args:
     - '--approval-mode=yolo'
     - '--prompt'
-    - "Update the readme to be reflective of everything that is happening in this repo, make a haiyku of what is happening in the repo"
+    - "look in specific folder path: pkg/apis/pipeline and analyze the code against https://google.github.io/styleguide/go/best-practices.html create a report about your findings and explain the practices that this code is NOT following please reply with written suggestions on good ways that we can improve this code "
     - '--debug'
     secretEnv: ['GEMINI_API_KEY']
     waitFor: ['-']
