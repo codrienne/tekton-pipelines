@@ -81,4 +81,4 @@ substitutions:
   # MODIFICATION: Add substitutions for your PAT secret and repo details.
   # Replace these placeholder values when you run the build.
   _GITHUB_REPO_OWNER: 'codrienne'             # The owner of the repository.
-  _GITHUB_REPO_NAME: 'hazel-hackers-site'             # The name of the repository.
+  _GITHUB_REPO_NAME: 'tekton-pipelines'             # The name of the repository.
