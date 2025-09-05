@@ -234,6 +234,10 @@ steps:
 
 # --- Configuration ---
 
+options:
+  diskSizeGb: '300'
+  machineType: 'E2_HIGHCPU_32'
+
 # Secrets to make available as environment variables for all steps.
 availableSecrets:
   secretManager:
