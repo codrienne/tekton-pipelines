@@ -1540,6 +1540,26 @@ func TestPipelineRun_InvalidTimeouts(t *testing.T) {
 		},
 		want: apis.ErrInvalidValue(`0s (no timeout) should be <= pipeline duration`, "spec.timeouts.finally"),
 	}, {
+		name: "taskrunspec timeout greater than tasks timeout",
+		pr: v1beta1.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pipelinelinename",
+			},
+			Spec: v1beta1.PipelineRunSpec{
+				PipelineRef: &v1beta1.PipelineRef{
+					Name: "prname",
+				},
+				Timeouts: &v1beta1.TimeoutFields{
+					Tasks: &metav1.Duration{Duration: 10 * time.Minute},
+				},
+				TaskRunSpecs: []v1beta1.PipelineTaskRunSpec{{
+					PipelineTaskName: "task1",
+					Timeout:          &metav1.Duration{Duration: 20 * time.Minute},
+				}},
+			},
+		},
+		want: apis.ErrInvalidValue(`20m0s should be <= pipeline tasks duration 10m0s`, "spec.taskRunSpecs[0].timeout"),
+	}, {
 		name: "Timeout and Timeouts both are set",
 		pr: v1beta1.PipelineRun{
 			ObjectMeta: metav1.ObjectMeta{
