@@ -42,11 +42,11 @@ Further documentation available:
 ## Release
 
 
-### THE SUPER COOL AWESOME UPDATE
-- **Latest Release**: [v1.4.1][vAWESOME!] (2025-09-05) ([docs][vAWESOME!], [examples][vAWESOME!-examples])
-- **Initial Release**: [vAWESOME!][v1.4-0] (2025-09-04)
+### THE SUPER SUPER COOL AWESOME UPDATE
+- **Latest Release**: [v1.4.1][v1AWESOME!!] (2025-09-05) ([docs][v1AWESOME!!!], [examples][v1AWESOME!!!-examples])
+- **Initial Release**: [v1AWESOME!!!][v1.4-0] (2025-09-04)
 - **End of Life**: 2026-08-04
-- **Patch Releases**: [vAWESOME!][v1.4-0] [vAWESOME!][v1.4-1]
+- **Patch Releases**: [v1AWESOME!!!][v1.4-0] [v1AWESOME!!!][v1.4-1]
 
 ### v1.3 (LTS)
 - **Latest Release**: [v1.3.1][v1.3-1] (2025-08-05) ([docs][v1.3-1-docs], [examples][v1.3-1-examples])
