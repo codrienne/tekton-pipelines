@@ -24,7 +24,7 @@ steps:
   - '-c'
   - |
     set -ex
-    # Install and configure GitHub CLI
+    # Configure GitHub CLI
     echo "$$GITHUB_PAT" | gh auth login --with-token --hostname github.com
     gh config set git_protocol https
 
@@ -40,11 +40,12 @@ steps:
     cd "$${WORKTREE_PATH}"
 
     # Run the AI agent
-    gemini --prompt "You are a senior engineering agent. Your task is to analyze the code within the '${_DIRECTORY}' directory. \
-      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory and MUST NOT use '..' to access parent directories. \
+    gemini --prompt "You are a senior engineering agent. Your task is to analyze the code within the '$${WORKTREE_PATH}/${_DIRECTORY}' directory. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory ('$${WORKTREE_PATH}') and MUST NOT use '..' to access parent directories. \
       Within these constraints, find potential bugs like race conditions or null pointer exceptions. \
       If you find any, modify the code to fix them directly, updating unit tests as needed. Ensure tests pass. \
       Summarize your work in a new file named $${SUMMARY_FILE}." \
+      --model=${_MODEL} \
       --approval-mode=yolo
 
     # Check for changes and create a PR if needed
@@ -75,7 +76,7 @@ steps:
   - '-c'
   - |
     set -ex
-    # Install and configure GitHub CLI
+    # Configure GitHub CLI
     echo "$$GITHUB_PAT" | gh auth login --with-token --hostname github.com
     gh config set git_protocol https
 
@@ -91,11 +92,12 @@ steps:
     cd "$${WORKTREE_PATH}"
 
     # Run the AI agent
-    gemini --prompt "You are a senior technical writer agent. Your task is to scan the '${_DIRECTORY}' directory for a README.md file. \
-      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory and MUST NOT use '..' to access parent directories. \
+    gemini --prompt "You are a senior technical writer agent. Your task is to scan the '$${WORKTREE_PATH}/${_DIRECTORY}' directory for a README.md file. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory ('$${WORKTREE_PATH}') and MUST NOT use '..' to access parent directories. \
       Within these constraints, update the README to reflect the code in that directory, explaining its purpose and showing usage examples. \
       If the README is missing, create it. \
       Summarize your work in a new file named $${SUMMARY_FILE}." \
+      --model=${_MODEL} \
       --approval-mode=yolo
 
     # Check for changes and create a PR if needed
@@ -126,7 +128,7 @@ steps:
   - '-c'
   - |
     set -ex
-    # Install and configure GitHub CLI
+    # Configure GitHub CLI
     echo "$$GITHUB_PAT" | gh auth login --with-token --hostname github.com
     gh config set git_protocol https
 
@@ -142,10 +144,11 @@ steps:
     cd "$${WORKTREE_PATH}"
 
     # Run the AI agent
-    gemini --prompt "You are a senior software engineer in test. Your goal is to increase test coverage for code in the '${_DIRECTORY}' directory. \
-      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory and MUST NOT use '..' to access parent directories. \
+    gemini --prompt "You are a senior software engineer in test. Your goal is to increase test coverage for code in the '$${WORKTREE_PATH}/${_DIRECTORY}' directory. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory ('$${WORKTREE_PATH}') and MUST NOT use '..' to access parent directories. \
       Within these constraints, identify missing unit tests, write them, and ensure they pass. Only keep tests that pass. \
       Summarize your work in a new file named $${SUMMARY_FILE}." \
+      --model=${_MODEL} \
       --approval-mode=yolo
 
     go test ./$_DIRECTORY/...
@@ -178,7 +181,7 @@ steps:
   - '-c'
   - |
     set -ex
-    # Install and configure GitHub CLI
+    # Configure GitHub CLI
     echo "$$GITHUB_PAT" | gh auth login --with-token --hostname github.com
     gh config set git_protocol https
 
@@ -194,13 +197,14 @@ steps:
     cd "$${WORKTREE_PATH}"
 
     # Run the AI agent
-    gemini --prompt "You are a senior Go engineering agent. Analyze the code in the '${_DIRECTORY}' directory. \
-      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory and MUST NOT use '..' to access parent directories. \
+    gemini --prompt "You are a senior Go engineering agent. Analyze the code in the '$${WORKTREE_PATH}/${_DIRECTORY}' directory. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory ('$${WORKTREE_PATH}') and MUST NOT use '..' to access parent directories. \
       Within these constraints, apply these improvements: \
       1. **Refactor:** Improve code elegance and maintainability. \
       2. **Style:** Enforce the Google Go Style Guide. \
       3. **Modernize:** Update any deprecated packages or APIs, checking go.mod. \
       Summarize your work in a new file named $${SUMMARY_FILE}." \
+      --model=${_MODEL} \
       --approval-mode=yolo
 
     # Check for changes and create a PR if needed
@@ -231,7 +235,7 @@ steps:
   - '-c'
   - |
     set -ex
-    # Install and configure GitHub CLI
+    # Configure GitHub CLI
     echo "$$GITHUB_PAT" | gh auth login --with-token --hostname github.com
     gh config set git_protocol https
 
@@ -247,11 +251,12 @@ steps:
     cd "$${WORKTREE_PATH}"
 
     # Run the AI agent
-    gemini --prompt "You are a senior security reviewer agent. Audit the code in the '${_DIRECTORY}' directory. \
-      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory and MUST NOT use '..' to access parent directories. \
+    gemini --prompt "You are a senior security reviewer agent. Audit the code in the '$${WORKTREE_PATH}/${_DIRECTORY}' directory. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory ('$${WORKTREE_PATH}') and MUST NOT use '..' to access parent directories. \
       Within these constraints, find and fix vulnerabilities like hardcoded secrets, SQL injection, or XSS. \
       Replace hardcoded credentials with a 'REPLACE_WITH_SECRET_MANAGER_KEY' placeholder. \
       Summarize your work in a new file named $${SUMMARY_FILE}." \
+      --model=${_MODEL} \
       --approval-mode=yolo
 
     # Check for changes and create a PR if needed
@@ -289,6 +294,7 @@ availableSecrets:
 
 # User-defined substitutions to pass variables into the build.
 substitutions:
+  _MODEL: 'gemini-1.5-flash-latest'
   _SECRET_NAME_GEMINI: 'ed-gemini-argo-local-edrienne-key'
   _SECRET_NAME_GITHUB: 'ed-tekton-pipelines-token'
   _GITHUB_REPO_OWNER: 'codrienne'
