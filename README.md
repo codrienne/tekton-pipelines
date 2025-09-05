@@ -58,7 +58,6 @@ Tekton Pipelines are **Typed**:
 
 The latest version of our docs is available at:
 
-- [Installation Guide @ HEAD](DEVELOPMENT.md#install-pipeline)
 - [Docs @ HEAD](/docs/README.md)
 - [Examples @ HEAD](/examples)
 
@@ -95,7 +94,6 @@ out [the spec changes and migration paths](./docs/migrating-v1alpha1-to-v1beta1.
 We are so excited to have you!
 
 - See [CONTRIBUTING.md](CONTRIBUTING.md) for an overview of our processes
-- See [DEVELOPMENT.md](DEVELOPMENT.md) for how to get started
 - [Deep dive](./docs/developers/README.md) into demystifying the inner workings
   (advanced reading material)
 - Look at our
