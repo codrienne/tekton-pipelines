@@ -42,7 +42,7 @@ steps:
     # Run the AI agent
     gemini --prompt "You are an autonomous senior engineering agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to find and fix bugs in the '${_DIRECTORY}' subdirectory. \
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
-      You have full autonomy to read, analyze, and modify any files required to complete your task. Do not ask for permission or confirmation before reading or analyzing files, regardless of the quantity. \
+      You have full autonomy. Formulate a plan and execute it immediately. Do not ask for permission, confirmation, or ask 'Should I proceed?'. \
       First, run the 'ls -R ${_DIRECTORY}' command to discover the files. Then, for each relevant file, analyze it for potential bugs like race conditions or null pointer exceptions. \
       If you find any, modify the code to fix them directly, updating unit tests as needed. Ensure tests pass. \
       Finally, summarize your work in a new file named $${SUMMARY_FILE}." \
@@ -95,7 +95,7 @@ steps:
     # Run the AI agent
     gemini --prompt "You are an autonomous senior technical writer agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to improve documentation in the '${_DIRECTORY}' subdirectory. \
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
-      You have full autonomy to proceed. Do not ask for permission before reading files. \
+      You have full autonomy. Formulate a plan and execute it immediately. Do not ask for permission, confirmation, or ask 'Should I proceed?'. \
       First, run 'ls -R ${_DIRECTORY}' to discover the files. Then, find a README.md file. \
       If the README exists, update it to reflect the code in the directory, explaining its purpose and showing usage examples. If it is missing, create it. \
       Finally, summarize your work in a new file named $${SUMMARY_FILE}." \
@@ -201,7 +201,7 @@ steps:
     # Run the AI agent
     gemini --prompt "You are an autonomous senior Go engineering agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to improve code quality in the '${_DIRECTORY}' subdirectory. \
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
-      You have full autonomy to proceed without asking for permission. \
+      You have full autonomy. Formulate a plan and execute it immediately. Do not ask for permission, confirmation, or ask 'Should I proceed?'. \
       First, run 'ls -R ${_DIRECTORY}' to see the files. Then, apply these improvements to the code: \
       1. **Refactor:** Improve code elegance and maintainability. \
       2. **Style:** Enforce the Google Go Style Guide. \
@@ -256,7 +256,7 @@ steps:
     # Run the AI agent
     gemini --prompt "You are an autonomous senior security reviewer agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to audit code in the '${_DIRECTORY}' subdirectory. \
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
-      You have full autonomy to read and analyze all necessary files without asking for confirmation. \
+      You have full autonomy. Formulate a plan and execute it immediately. Do not ask for permission, confirmation, or ask 'Should I proceed?'. \
       First, run 'ls -R ${_DIRECTORY}' to see the files. Then, find and fix vulnerabilities like hardcoded secrets, SQL injection, or XSS. \
       Replace hardcoded credentials with a 'REPLACE_WITH_SECRET_MANAGER_KEY' placeholder. \
       Finally, summarize your work in a new file named $${SUMMARY_FILE}." \
@@ -298,9 +298,10 @@ availableSecrets:
 
 # User-defined substitutions to pass variables into the build.
 substitutions:
-  _MODEL: 'gemini-1.5-flash' # 'gemini-2.5-flash' # gemini-2.5-pro
+  _MODEL: 'gemini-1.5-flash-latest'
   _SECRET_NAME_GEMINI: 'ed-gemini-argo-local-edrienne-key'
   _SECRET_NAME_GITHUB: 'ed-tekton-pipelines-token'
   _GITHUB_REPO_OWNER: 'codrienne'
   _GITHUB_REPO_NAME: 'tekton-pipelines'
-  _DIRECTORY: 'pkg/apis/pipeline/v1alpha1' # the directory the agent should focus on
+  _DIRECTORY: 'pkg/apis/pipeline/v1' # The directory for the agents to focus on.
+
