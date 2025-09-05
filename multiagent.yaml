@@ -26,13 +26,10 @@ steps:
   - |
     set -ex
     BRANCH_NAME="BugHunterAgent-${BUILD_ID}"
-    WORKTREE_DIR="/workspace/$${BRANCH_NAME}"
 
-    # Create an isolated working directory (worktree) for this agent
-    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_DIR}"
-    
-    # Change into the agent's isolated directory to prevent conflicts
-    cd "$${WORKTREE_DIR}"
+    # Create and move into the isolated worktree directory in one step
+    git worktree add -b "$${BRANCH_NAME}" "/workspace/$${BRANCH_NAME}"
+    cd "/workspace/$${BRANCH_NAME}"
 
     gemini --prompt "You are a senior engineering agent. Analyze the code within the '${_DIRECTORY}' directory \
       for potential bugs, including race conditions, null pointer exceptions, and logical flaws. \
@@ -58,10 +55,9 @@ steps:
   - |
     set -ex
     BRANCH_NAME="DocWriterAgent-${BUILD_ID}"
-    WORKTREE_DIR="/workspace/$${BRANCH_NAME}"
 
-    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_DIR}"
-    cd "$${WORKTREE_DIR}"
+    git worktree add -b "$${BRANCH_NAME}" "/workspace/$${BRANCH_NAME}"
+    cd "/workspace/$${BRANCH_NAME}"
 
     gemini --prompt "You are a senior technical writer agent. Scan the '${_DIRECTORY}' directory for a README.md file. \
       Update it to fully reflect the code in that specific directory. Ensure it explains the code's purpose, \
@@ -87,10 +83,9 @@ steps:
   - |
     set -ex
     BRANCH_NAME="TestWriterAgent-${BUILD_ID}"
-    WORKTREE_DIR="/workspace/$${BRANCH_NAME}"
 
-    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_DIR}"
-    cd "$${WORKTREE_DIR}"
+    git worktree add -b "$${BRANCH_NAME}" "/workspace/$${BRANCH_NAME}"
+    cd "/workspace/$${BRANCH_NAME}"
 
     gemini --prompt "You are a senior software engineer in test. Your goal is to increase test coverage for the code \
       in the '${_DIRECTORY}' directory. Identify critical code paths missing unit tests within that directory, \
@@ -98,7 +93,7 @@ steps:
       and correctly validate behavior. Only keep tests that pass. Summarize the changes in TestWriterAgent-changes.md" \
       --approval-mode=yolo
     
-    # CORRECTED: Use a single '$' for the Cloud Build substitution variable _DIRECTORY
+    # Use a single '$' for the Cloud Build substitution variable _DIRECTORY
     go test ./$_DIRECTORY/...
     
     if ! git diff --quiet; then
@@ -119,10 +114,9 @@ steps:
   - |
     set -ex
     BRANCH_NAME="CodeQualityAgent-${BUILD_ID}"
-    WORKTREE_DIR="/workspace/$${BRANCH_NAME}"
 
-    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_DIR}"
-    cd "$${WORKTREE_DIR}"
+    git worktree add -b "$${BRANCH_NAME}" "/workspace/$${BRANCH_NAME}"
+    cd "/workspace/$${BRANCH_NAME}"
 
     gemini --prompt "You are a senior engineering agent specializing in Go code quality. Your task is to analyze the \
       code within the '${_DIRECTORY}' directory and apply three types of improvements: \
@@ -150,10 +144,9 @@ steps:
   - |
     set -ex
     BRANCH_NAME="SecurityAgent-${BUILD_ID}"
-    WORKTREE_DIR="/workspace/$${BRANCH_NAME}"
 
-    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_DIR}"
-    cd "$${WORKTREE_DIR}"
+    git worktree add -b "$${BRANCH_NAME}" "/workspace/$${BRANCH_NAME}"
+    cd "/workspace/$${BRANCH_NAME}"
 
     gemini --prompt "You are a senior security reviewer agent. Audit the code within the '${_DIRECTORY}' directory \
       for hardcoded API keys/secrets, Cloud Storage bucket squatting, SQL injection points, and XSS vulnerabilities. \
