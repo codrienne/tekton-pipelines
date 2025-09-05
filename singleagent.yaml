@@ -1,32 +1,234 @@
+# This Cloud Build file deploys 5 parallel AI agents to work on your codebase.
+# Each agent uses an isolated git worktree and a carefully crafted prompt
+# to securely analyze a specific subdirectory.
+
 steps:
-- id: 'BugHunterAgent'
-  name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-  waitFor: ['-'] # Run in parallel
-  secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
+# --- Step 1: Configure Git for all subsequent steps ---
+- id: 'ConfigureGit'
+  name: 'gcr.io/cloud-builders/git'
   entrypoint: 'bash'
   args:
   - '-c'
   - |
     set -ex
     git config --global user.email "cloud-build-bot@google.com"
-    git config --global user.name "Cloud Build Bot (Bug Hunter)"
-    git checkout -b "BugHunterAgent-${BUILD_ID}"
-    gemini --prompt "You are a senior engineering agent. Analyze the code within the '${_DIRECTORY}' directory for potential bugs, including race conditions, null pointer exceptions, and logical flaws. If you find any, modify the code to fix them directly. Make sure you adjust any unit tests as necessary, and make sure those tests pass. Please summarize what you did in a file called BugHunterAgent-changes.md" --approval-mode=yolo
-    # Only commit and push if the agent made changes
-    if ! git diff --quiet; then
+    git config --global user.name "Cloud Build Bot"
+    echo "✅ Git configured globally."
+
+- id: 'BugHunterAgent'
+  name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
+  secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    set -ex
+    # Configure GitHub CLI
+    echo "$$GITHUB_PAT" | gh auth login --with-token --hostname github.com
+    gh config set git_protocol https
+
+    # Agent-specific variables
+    AGENT_NAME="BugHunterAgent"
+    BRANCH_NAME="$${AGENT_NAME}-${BUILD_ID}"
+    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    SUMMARY_FILE="$${AGENT_NAME}-changes.md"
+    COMMIT_MSG="fix(ai): Automated bug fixes from $${AGENT_NAME} in ${_DIRECTORY}"
+
+    # Setup git worktree
+    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
+    cd "$${WORKTREE_PATH}"
+
+    # Run the AI agent
+    gemini --prompt "You are an autonomous senior engineering agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to find and fix bugs in the '${_DIRECTORY}' subdirectory. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
+      You have full autonomy. Formulate a plan and execute it immediately. Do not ask for permission, confirmation, or ask 'Should I proceed?'. \
+      First, run the 'ls -R ${_DIRECTORY}' command to discover the files. Then, for each relevant file, analyze it for potential bugs like race conditions or null pointer exceptions. \
+      If you find and fix any bugs, you must summarize your work in a new file named $${SUMMARY_FILE}}. If you make no changes, do not create this file." \
+      --model=${_MODEL} \
+      --approval-mode=yolo
+
+    # Check for changes and create a PR if needed
+    if [[ -n "$(git status --porcelain)" ]]; then
+      SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
       git add .
-      git commit -m "fix(ai): Automated bug fixes from BugHunterAgent in ${_DIRECTORY}"
-      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "BugHunterAgent-${BUILD_ID}"
+      git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
+      git commit -m "$${COMMIT_MSG}"
+      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "$${BRANCH_NAME}"
+
+      # Create the Pull Request
+      gh pr create \
+        --repo "${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}" \
+        --base "ed-multiagent" \
+        --head "$${BRANCH_NAME}" \
+        --title "$${COMMIT_MSG}" \
+        --body "$${SUMMARY_BODY}"
     else
-      echo "BugHunterAgent found no issues to fix in ${_DIRECTORY}."
-    fi 
+      echo "$${AGENT_NAME} found no issues to fix in ${_DIRECTORY}."
+    fi
+
+- id: 'DocWriterAgent'
+  name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
+  secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    set -ex
+    # Configure GitHub CLI
+    echo "$$GITHUB_PAT" | gh auth login --with-token --hostname github.com
+    gh config set git_protocol https
+
+    # Agent-specific variables
+    AGENT_NAME="DocWriterAgent"
+    BRANCH_NAME="$${AGENT_NAME}-${BUILD_ID}"
+    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    SUMMARY_FILE="$${AGENT_NAME}-changes.md"
+    COMMIT_MSG="docs(ai): Automated documentation updates from $${AGENT_NAME} in ${_DIRECTORY}"
+
+    # Setup git worktree
+    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
+    cd "$${WORKTREE_PATH}"
+
+    # Run the AI agent
+    gemini --prompt "You are an autonomous senior technical writer agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to improve documentation in the '${_DIRECTORY}' subdirectory. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
+      You have full autonomy. Formulate a plan and execute it immediately. Do not ask for permission, confirmation, or ask 'Should I proceed?'. \
+      First, run 'ls -R ${_DIRECTORY}' to discover the files. Then, find a README.md file. \
+      If the README exists, update it to reflect the code in the directory, explaining its purpose and showing usage examples. If it is missing, create it. \
+      If and only if you create or modify documentation, you must summarize your work in a new file named $${SUMMARY_FILE}}. If you make no changes, do not create this file." \
+      --model=${_MODEL} \
+      --approval-mode=yolo
+
+    # Check for changes and create a PR if needed
+    if [[ -n "$(git status --porcelain)" ]]; then
+      SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
+      git add .
+      git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
+      git commit -m "$${COMMIT_MSG}"
+      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "$${BRANCH_NAME}"
+
+      # Create the Pull Request
+      gh pr create \
+        --repo "${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}" \
+        --base "ed-multiagent" \
+        --head "$${BRANCH_NAME}" \
+        --title "$${COMMIT_MSG}" \
+        --body "$${SUMMARY_BODY}"
+    else
+      echo "$${AGENT_NAME} found no documentation to update in ${_DIRECTORY}."
+    fi
+
+- id: 'CodeQualityAgent'
+  name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
+  secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    set -ex
+    # Configure GitHub CLI
+    echo "$$GITHUB_PAT" | gh auth login --with-token --hostname github.com
+    gh config set git_protocol https
+
+    # Agent-specific variables
+    AGENT_NAME="CodeQualityAgent"
+    BRANCH_NAME="$${AGENT_NAME}-${BUILD_ID}"
+    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    SUMMARY_FILE="$${AGENT_NAME}-changes.md"
+    COMMIT_MSG="refactor(ai): Apply automated code quality improvements in ${_DIRECTORY}"
+
+    # Setup git worktree
+    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
+    cd "$${WORKTREE_PATH}"
+
+    # Run the AI agent
+    gemini --prompt "You are an autonomous senior Go engineering agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to improve code quality in the '${_DIRECTORY}' subdirectory. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
+      You have full autonomy. Formulate a plan and execute it immediately. Do not ask for permission, confirmation, or ask 'Should I proceed?'. \
+      First, run 'ls -R ${_DIRECTORY}' to see the files. Then, apply these improvements to the code: \
+      1. **Refactor:** Improve code elegance and maintainability. \
+      2. **Style:** Enforce the Google Go Style Guide. \
+      3. **Modernize:** Update any deprecated packages or APIs, checking go.mod. \
+      If and only if you apply improvements to the code, you must summarize your work in a new file named $${SUMMARY_FILE}}. If you make no changes, do not create this file." \
+      --model=${_MODEL} \
+      --approval-mode=yolo
+
+    # Check for changes and create a PR if needed
+    if [[ -n "$(git status --porcelain)" ]]; then
+      SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
+      git add .
+      git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
+      git commit -m "$${COMMIT_MSG}"
+      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "$${BRANCH_NAME}"
+
+      # Create the Pull Request
+      gh pr create \
+        --repo "${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}" \
+        --base "ed-multiagent" \
+        --head "$${BRANCH_NAME}" \
+        --title "$${COMMIT_MSG}" \
+        --body "$${SUMMARY_BODY}"
+    else
+      echo "$${AGENT_NAME} found no improvements to make in ${_DIRECTORY}."
+    fi
+
+- id: 'SecurityAgent'
+  name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
+  secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    set -ex
+    # Configure GitHub CLI
+    echo "$$GITHUB_PAT" | gh auth login --with-token --hostname github.com
+    gh config set git_protocol https
+
+    # Agent-specific variables
+    AGENT_NAME="SecurityAgent"
+    BRANCH_NAME="$${AGENT_NAME}-${BUILD_ID}"
+    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    SUMMARY_FILE="$${AGENT_NAME}-changes.md"
+    COMMIT_MSG="security(ai): Automated security fixes from $${AGENT_NAME} in ${_DIRECTORY}"
+
+    # Setup git worktree
+    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
+    cd "$${WORKTREE_PATH}"
+
+    # Run the AI agent
+    gemini --prompt "You are an autonomous senior security reviewer agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to audit code in the '${_DIRECTORY}' subdirectory. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
+      You have full autonomy. Formulate a plan and execute it immediately. Do not ask for permission, confirmation, or ask 'Should I proceed?'. \
+      First, run 'ls -R ${_DIRECTORY}' to see the files. Then, find and fix vulnerabilities like hardcoded secrets, SQL injection, or XSS. \
+      Replace hardcoded credentials with a 'REPLACE_WITH_SECRET_MANAGER_KEY' placeholder. \
+      If and only if you find and fix vulnerabilities, you must summarize your work in a new file named $${SUMMARY_FILE}}. If you make no changes, do not create this file." \
+      --model=${_MODEL} \
+      --approval-mode=yolo
+
+    # Check for changes and create a PR if needed
+    if [[ -n "$(git status --porcelain)" ]]; then
+      SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
+      git add .
+      git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
+      git commit -m "$${COMMIT_MSG}"
+      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "$${BRANCH_NAME}"
+
+      # Create the Pull Request
+      gh pr create \
+        --repo "${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}" \
+        --base "ed-multiagent" \
+        --head "$${BRANCH_NAME}" \
+        --title "$${COMMIT_MSG}" \
+        --body "$${SUMMARY_BODY}"
+    else
+      echo "$${AGENT_NAME} found no security issues in ${_DIRECTORY}."
+    fi
 
 # --- Configuration ---
 
 # Use more CPU to make it faster
 options:
- machineType: 'E2_HIGHCPU_32'
-
+  machineType: 'E2_HIGHCPU_32'
 
 # Secrets to make available as environment variables for all steps.
 availableSecrets:
@@ -38,8 +240,10 @@ availableSecrets:
 
 # User-defined substitutions to pass variables into the build.
 substitutions:
+  _MODEL: 'gemini-2.5-pro' # 'gemini-1.5-flash-latest'
   _SECRET_NAME_GEMINI: 'ed-gemini-argo-local-edrienne-key'
   _SECRET_NAME_GITHUB: 'ed-tekton-pipelines-token'
   _GITHUB_REPO_OWNER: 'codrienne'
   _GITHUB_REPO_NAME: 'tekton-pipelines'
   _DIRECTORY: 'pkg/apis/pipeline/v1beta1' # The directory for the agents to focus on.
+
