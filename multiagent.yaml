@@ -24,25 +24,47 @@ steps:
   - '-c'
   - |
     set -ex
-    BRANCH_NAME="BugHunterAgent-${BUILD_ID}"
-    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    # Install and configure GitHub CLI
+    apt-get update && apt-get install -y github-cli
+    echo "$$GITHUB_PAT" | gh auth login --with-token --hostname github.com
+    gh config set git_protocol https
 
+    # Agent-specific variables
+    AGENT_NAME="BugHunterAgent"
+    BRANCH_NAME="$${AGENT_NAME}-${BUILD_ID}"
+    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    SUMMARY_FILE="$${AGENT_NAME}-changes.md"
+    COMMIT_MSG="fix(ai): Automated bug fixes from $${AGENT_NAME} in ${_DIRECTORY}"
+
+    # Setup git worktree
     git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
     cd "$${WORKTREE_PATH}"
 
+    # Run the AI agent
     gemini --prompt "You are a senior engineering agent. Your task is to analyze the code within the '${_DIRECTORY}' directory. \
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory and MUST NOT use '..' to access parent directories. \
       Within these constraints, find potential bugs like race conditions or null pointer exceptions. \
       If you find any, modify the code to fix them directly, updating unit tests as needed. Ensure tests pass. \
-      Summarize your work in a new file named BugHunterAgent-changes.md." \
+      Summarize your work in a new file named $${SUMMARY_FILE}." \
       --approval-mode=yolo
-    
+
+    # Check for changes and create a PR if needed
     if ! git diff --quiet; then
+      SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
       git add .
-      git commit -m "fix(ai): Automated bug fixes from BugHunterAgent in ${_DIRECTORY}"
+      git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
+      git commit -m "$${COMMIT_MSG}"
       git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "$${BRANCH_NAME}"
+
+      # Create the Pull Request
+      gh pr create \
+        --repo "${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}" \
+        --base "ed-multiagent" \
+        --head "$${BRANCH_NAME}" \
+        --title "$${COMMIT_MSG}" \
+        --body "$${SUMMARY_BODY}"
     else
-      echo "BugHunterAgent found no issues to fix in ${_DIRECTORY}."
+      echo "$${AGENT_NAME} found no issues to fix in ${_DIRECTORY}."
     fi
 
 - id: 'DocWriterAgent'
@@ -54,24 +76,47 @@ steps:
   - '-c'
   - |
     set -ex
-    BRANCH_NAME="DocWriterAgent-${BUILD_ID}"
-    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    # Install and configure GitHub CLI
+    apt-get update && apt-get install -y github-cli
+    echo "$$GITHUB_PAT" | gh auth login --with-token --hostname github.com
+    gh config set git_protocol https
 
+    # Agent-specific variables
+    AGENT_NAME="DocWriterAgent"
+    BRANCH_NAME="$${AGENT_NAME}-${BUILD_ID}"
+    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    SUMMARY_FILE="$${AGENT_NAME}-changes.md"
+    COMMIT_MSG="docs(ai): Automated documentation updates from $${AGENT_NAME} in ${_DIRECTORY}"
+
+    # Setup git worktree
     git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
     cd "$${WORKTREE_PATH}"
 
+    # Run the AI agent
     gemini --prompt "You are a senior technical writer agent. Your task is to scan the '${_DIRECTORY}' directory for a README.md file. \
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory and MUST NOT use '..' to access parent directories. \
       Within these constraints, update the README to reflect the code in that directory, explaining its purpose and showing usage examples. \
-      If the README is missing, create it." \
+      If the README is missing, create it. \
+      Summarize your work in a new file named $${SUMMARY_FILE}." \
       --approval-mode=yolo
-    
+
+    # Check for changes and create a PR if needed
     if ! git diff --quiet; then
+      SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
       git add .
-      git commit -m "docs(ai): Automated documentation updates from DocWriterAgent in ${_DIRECTORY}"
+      git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
+      git commit -m "$${COMMIT_MSG}"
       git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "$${BRANCH_NAME}"
+
+      # Create the Pull Request
+      gh pr create \
+        --repo "${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}" \
+        --base "ed-multiagent" \
+        --head "$${BRANCH_NAME}" \
+        --title "$${COMMIT_MSG}" \
+        --body "$${SUMMARY_BODY}"
     else
-      echo "DocWriterAgent found no documentation to update in ${_DIRECTORY}."
+      echo "$${AGENT_NAME} found no documentation to update in ${_DIRECTORY}."
     fi
 
 - id: 'TestWriterAgent'
@@ -83,26 +128,48 @@ steps:
   - '-c'
   - |
     set -ex
-    BRANCH_NAME="TestWriterAgent-${BUILD_ID}"
-    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    # Install and configure GitHub CLI
+    apt-get update && apt-get install -y github-cli
+    echo "$$GITHUB_PAT" | gh auth login --with-token --hostname github.com
+    gh config set git_protocol https
 
+    # Agent-specific variables
+    AGENT_NAME="TestWriterAgent"
+    BRANCH_NAME="$${AGENT_NAME}-${BUILD_ID}"
+    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    SUMMARY_FILE="$${AGENT_NAME}-changes.md"
+    COMMIT_MSG="test(ai): Add new unit tests from $${AGENT_NAME} for ${_DIRECTORY}"
+
+    # Setup git worktree
     git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
     cd "$${WORKTREE_PATH}"
 
+    # Run the AI agent
     gemini --prompt "You are a senior software engineer in test. Your goal is to increase test coverage for code in the '${_DIRECTORY}' directory. \
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory and MUST NOT use '..' to access parent directories. \
       Within these constraints, identify missing unit tests, write them, and ensure they pass. Only keep tests that pass. \
-      Summarize your work in a new file named TestWriterAgent-changes.md." \
+      Summarize your work in a new file named $${SUMMARY_FILE}." \
       --approval-mode=yolo
-    
+
     go test ./$_DIRECTORY/...
-    
+
+    # Check for changes and create a PR if needed
     if ! git diff --quiet; then
+      SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
       git add .
-      git commit -m "test(ai): Add new unit tests from TestWriterAgent for ${_DIRECTORY}"
+      git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
+      git commit -m "$${COMMIT_MSG}"
       git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "$${BRANCH_NAME}"
+
+      # Create the Pull Request
+      gh pr create \
+        --repo "${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}" \
+        --base "ed-multiagent" \
+        --head "$${BRANCH_NAME}" \
+        --title "$${COMMIT_MSG}" \
+        --body "$${SUMMARY_BODY}"
     else
-      echo "TestWriterAgent did not add any new tests in ${_DIRECTORY}."
+      echo "$${AGENT_NAME} did not add any new tests in ${_DIRECTORY}."
     fi
 
 - id: 'CodeQualityAgent'
@@ -114,27 +181,49 @@ steps:
   - '-c'
   - |
     set -ex
-    BRANCH_NAME="CodeQualityAgent-${BUILD_ID}"
-    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    # Install and configure GitHub CLI
+    apt-get update && apt-get install -y github-cli
+    echo "$$GITHUB_PAT" | gh auth login --with-token --hostname github.com
+    gh config set git_protocol https
 
+    # Agent-specific variables
+    AGENT_NAME="CodeQualityAgent"
+    BRANCH_NAME="$${AGENT_NAME}-${BUILD_ID}"
+    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    SUMMARY_FILE="$${AGENT_NAME}-changes.md"
+    COMMIT_MSG="refactor(ai): Apply automated code quality improvements in ${_DIRECTORY}"
+
+    # Setup git worktree
     git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
     cd "$${WORKTREE_PATH}"
 
+    # Run the AI agent
     gemini --prompt "You are a senior Go engineering agent. Analyze the code in the '${_DIRECTORY}' directory. \
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory and MUST NOT use '..' to access parent directories. \
       Within these constraints, apply these improvements: \
       1. **Refactor:** Improve code elegance and maintainability. \
       2. **Style:** Enforce the Google Go Style Guide. \
       3. **Modernize:** Update any deprecated packages or APIs, checking go.mod. \
-      Summarize your work in a new file named CodeQualityAgent-changes.md." \
+      Summarize your work in a new file named $${SUMMARY_FILE}." \
       --approval-mode=yolo
-    
+
+    # Check for changes and create a PR if needed
     if ! git diff --quiet; then
+      SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
       git add .
-      git commit -m "refactor(ai): Apply automated code quality improvements in ${_DIRECTORY}"
+      git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
+      git commit -m "$${COMMIT_MSG}"
       git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "$${BRANCH_NAME}"
+
+      # Create the Pull Request
+      gh pr create \
+        --repo "${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}" \
+        --base "ed-multiagent" \
+        --head "$${BRANCH_NAME}" \
+        --title "$${COMMIT_MSG}" \
+        --body "$${SUMMARY_BODY}"
     else
-      echo "CodeQualityAgent found no improvements to make in ${_DIRECTORY}."
+      echo "$${AGENT_NAME} found no improvements to make in ${_DIRECTORY}."
     fi
 
 - id: 'SecurityAgent'
@@ -146,25 +235,47 @@ steps:
   - '-c'
   - |
     set -ex
-    BRANCH_NAME="SecurityAgent-${BUILD_ID}"
-    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    # Install and configure GitHub CLI
+    apt-get update && apt-get install -y github-cli
+    echo "$$GITHUB_PAT" | gh auth login --with-token --hostname github.com
+    gh config set git_protocol https
 
+    # Agent-specific variables
+    AGENT_NAME="SecurityAgent"
+    BRANCH_NAME="$${AGENT_NAME}-${BUILD_ID}"
+    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    SUMMARY_FILE="$${AGENT_NAME}-changes.md"
+    COMMIT_MSG="security(ai): Automated security fixes from $${AGENT_NAME} in ${_DIRECTORY}"
+
+    # Setup git worktree
     git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
     cd "$${WORKTREE_PATH}"
 
+    # Run the AI agent
     gemini --prompt "You are a senior security reviewer agent. Audit the code in the '${_DIRECTORY}' directory. \
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory and MUST NOT use '..' to access parent directories. \
       Within these constraints, find and fix vulnerabilities like hardcoded secrets, SQL injection, or XSS. \
       Replace hardcoded credentials with a 'REPLACE_WITH_SECRET_MANAGER_KEY' placeholder. \
-      Summarize your work in a new file named SecurityAgent-changes.md." \
+      Summarize your work in a new file named $${SUMMARY_FILE}." \
       --approval-mode=yolo
-    
+
+    # Check for changes and create a PR if needed
     if ! git diff --quiet; then
+      SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
       git add .
-      git commit -m "security(ai): Automated security fixes from SecurityAgent in ${_DIRECTORY}"
+      git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
+      git commit -m "$${COMMIT_MSG}"
       git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "$${BRANCH_NAME}"
+
+      # Create the Pull Request
+      gh pr create \
+        --repo "${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}" \
+        --base "ed-multiagent" \
+        --head "$${BRANCH_NAME}" \
+        --title "$${COMMIT_MSG}" \
+        --body "$${SUMMARY_BODY}"
     else
-      echo "SecurityAgent found no security issues in ${_DIRECTORY}."
+      echo "$${AGENT_NAME} found no security issues in ${_DIRECTORY}."
     fi
 
 # --- Configuration ---
