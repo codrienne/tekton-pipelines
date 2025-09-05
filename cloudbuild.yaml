@@ -8,7 +8,18 @@ steps:
     - "Create a file that is called Matt-${BUILD_ID}, make it a txt file, and inside of it write Here is your random file!!!"
     - '--debug'
     secretEnv: ['GEMINI_API_KEY']
-    
+
+  # Step 2: Your original step to analyze Go code style.
+  - name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
+    id: GeminiCreateCoolReadME
+    args:
+    - '--approval-mode=yolo'
+    - '--prompt'
+    - "look in specific folder path: pkg/apis/pipeline and analyze the code against https://google.github.io/styleguide/go/best-practices.html create a report about your findings and explain the practices that this code is NOT following please reply with written suggestions on good ways that we can improve this code "
+    - '--debug'
+    secretEnv: ['GEMINI_API_KEY']
+    waitFor: ['-'] # Starts at the same time as the first step
+
   # MODIFICATION: New step to audit all README files in the repository.
   - name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
     id: GeminiAuditDocumentation
