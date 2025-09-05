@@ -40,8 +40,9 @@ steps:
     cd "$${WORKTREE_PATH}"
 
     # Run the AI agent
-    gemini --prompt "You are a senior engineering agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to find and fix bugs in the '${_DIRECTORY}' subdirectory. \
+    gemini --prompt "You are an autonomous senior engineering agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to find and fix bugs in the '${_DIRECTORY}' subdirectory. \
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
+      You have full autonomy to read, analyze, and modify any files required to complete your task. Do not ask for permission or confirmation before reading or analyzing files, regardless of the quantity. \
       First, run the 'ls -R ${_DIRECTORY}' command to discover the files. Then, for each relevant file, analyze it for potential bugs like race conditions or null pointer exceptions. \
       If you find any, modify the code to fix them directly, updating unit tests as needed. Ensure tests pass. \
       Finally, summarize your work in a new file named $${SUMMARY_FILE}." \
@@ -92,8 +93,9 @@ steps:
     cd "$${WORKTREE_PATH}"
 
     # Run the AI agent
-    gemini --prompt "You are a senior technical writer agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to improve documentation in the '${_DIRECTORY}' subdirectory. \
+    gemini --prompt "You are an autonomous senior technical writer agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to improve documentation in the '${_DIRECTORY}' subdirectory. \
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
+      You have full autonomy to proceed. Do not ask for permission before reading files. \
       First, run 'ls -R ${_DIRECTORY}' to discover the files. Then, find a README.md file. \
       If the README exists, update it to reflect the code in the directory, explaining its purpose and showing usage examples. If it is missing, create it. \
       Finally, summarize your work in a new file named $${SUMMARY_FILE}." \
@@ -197,8 +199,9 @@ steps:
     cd "$${WORKTREE_PATH}"
 
     # Run the AI agent
-    gemini --prompt "You are a senior Go engineering agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to improve code quality in the '${_DIRECTORY}' subdirectory. \
+    gemini --prompt "You are an autonomous senior Go engineering agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to improve code quality in the '${_DIRECTORY}' subdirectory. \
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
+      You have full autonomy to proceed without asking for permission. \
       First, run 'ls -R ${_DIRECTORY}' to see the files. Then, apply these improvements to the code: \
       1. **Refactor:** Improve code elegance and maintainability. \
       2. **Style:** Enforce the Google Go Style Guide. \
@@ -251,8 +254,9 @@ steps:
     cd "$${WORKTREE_PATH}"
 
     # Run the AI agent
-    gemini --prompt "You are a senior security reviewer agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to audit code in the '${_DIRECTORY}' subdirectory. \
+    gemini --prompt "You are an autonomous senior security reviewer agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to audit code in the '${_DIRECTORY}' subdirectory. \
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
+      You have full autonomy to read and analyze all necessary files without asking for confirmation. \
       First, run 'ls -R ${_DIRECTORY}' to see the files. Then, find and fix vulnerabilities like hardcoded secrets, SQL injection, or XSS. \
       Replace hardcoded credentials with a 'REPLACE_WITH_SECRET_MANAGER_KEY' placeholder. \
       Finally, summarize your work in a new file named $${SUMMARY_FILE}." \
@@ -275,7 +279,7 @@ steps:
         --title "$${COMMIT_MSG}" \
         --body "$${SUMMARY_BODY}"
     else
-      echo "$${AGENT_NAME} found no security issues in ${_DIRECTORY}."
+      echo "$${AGENT_name} found no security issues in ${_DIRECTORY}."
     fi
 
 # --- Configuration ---
@@ -294,10 +298,9 @@ availableSecrets:
 
 # User-defined substitutions to pass variables into the build.
 substitutions:
-  _MODEL: 'gemini-1.5-flash-latest'
+  _MODEL: 'gemini-2.5-flash'
   _SECRET_NAME_GEMINI: 'ed-gemini-argo-local-edrienne-key'
   _SECRET_NAME_GITHUB: 'ed-tekton-pipelines-token'
   _GITHUB_REPO_OWNER: 'codrienne'
   _GITHUB_REPO_NAME: 'tekton-pipelines'
   _DIRECTORY: 'pkg/apis/pipeline/v1' # The directory for the agents to focus on.
-
