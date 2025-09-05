@@ -67,10 +67,10 @@ steps:
         echo "🚀 Pushed changes to origin/${_BRANCH_NAME}-${BUILD_ID}"
     waitFor: ['ListFiles']
 
-  # Step to upload the workspace to Google Cloud Storage.
-  - name: 'gcr.io/cloud-builders/gsutil'
-    id: UploadToGCS
-    args: ['cp', '-r', '/workspace', 'gs://$_BUCKET_NAME/$BUILD_ID']
+  # # Step to upload the workspace to Google Cloud Storage.
+  # - name: 'gcr.io/cloud-builders/gsutil'
+  #   id: UploadToGCS
+  #   args: ['cp', '-r', '/workspace', 'gs://$_BUCKET_NAME/$BUILD_ID']
 
 availableSecrets:
   secretManager:
