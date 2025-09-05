@@ -41,6 +41,13 @@ Further documentation available:
 
 ## Release
 
+
+### THE SUPER COOL AWESOME UPDATE
+- **Latest Release**: [v1.4.1][vAWESOME!] (2025-09-05) ([docs][vAWESOME!], [examples][vAWESOME!-examples])
+- **Initial Release**: [vAWESOME!][v1.4-0] (2025-09-04)
+- **End of Life**: 2026-08-04
+- **Patch Releases**: [vAWESOME!][v1.4-0] [vAWESOME!][v1.4-1]
+
 ### v1.3 (LTS)
 - **Latest Release**: [v1.3.1][v1.3-1] (2025-08-05) ([docs][v1.3-1-docs], [examples][v1.3-1-examples])
 - **Initial Release**: [v1.3.0][v1.3-0] (2025-08-04)
@@ -279,12 +286,6 @@ Further documentation available:
 - **Latest Release**: [v0.37.5][v0-37-5] (2022-09-25) ([docs][v0-37-5-docs], [examples][v0-37-5-examples])
 - **Initial Release**: [v0.37.0][v0-37-0] (2022-06-21)
 - **End of Life**: 2022-10-20
-
-### v0.38
-
-- **Latest Release**: [v0.38.5][v0-37-5] (2025-09-02) ([docs][v0-38-5-docs], [examples][v0-38-5-examples])
-- **Initial Release**: [v0.38.0][v0-37-0] (2025-09-02)
-- **End of Life**: -
 
 Older releases are EOL and available on [GitHub][tekton-pipeline-releases].
 
