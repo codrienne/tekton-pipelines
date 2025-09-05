@@ -40,11 +40,11 @@ steps:
     cd "$${WORKTREE_PATH}"
 
     # Run the AI agent
-    gemini --prompt "You are a senior engineering agent. Your task is to analyze the code within the '$${WORKTREE_PATH}/${_DIRECTORY}' directory. \
-      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory ('$${WORKTREE_PATH}') and MUST NOT use '..' to access parent directories. \
-      Within these constraints, find potential bugs like race conditions or null pointer exceptions. \
+    gemini --prompt "You are a senior engineering agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to find and fix bugs in the '${_DIRECTORY}' subdirectory. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
+      First, run the 'ls -R ${_DIRECTORY}' command to discover the files. Then, for each relevant file, analyze it for potential bugs like race conditions or null pointer exceptions. \
       If you find any, modify the code to fix them directly, updating unit tests as needed. Ensure tests pass. \
-      Summarize your work in a new file named $${SUMMARY_FILE}." \
+      Finally, summarize your work in a new file named $${SUMMARY_FILE}." \
       --model=${_MODEL} \
       --approval-mode=yolo
 
@@ -92,11 +92,11 @@ steps:
     cd "$${WORKTREE_PATH}"
 
     # Run the AI agent
-    gemini --prompt "You are a senior technical writer agent. Your task is to scan the '$${WORKTREE_PATH}/${_DIRECTORY}' directory for a README.md file. \
-      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory ('$${WORKTREE_PATH}') and MUST NOT use '..' to access parent directories. \
-      Within these constraints, update the README to reflect the code in that directory, explaining its purpose and showing usage examples. \
-      If the README is missing, create it. \
-      Summarize your work in a new file named $${SUMMARY_FILE}." \
+    gemini --prompt "You are a senior technical writer agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to improve documentation in the '${_DIRECTORY}' subdirectory. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
+      First, run 'ls -R ${_DIRECTORY}' to discover the files. Then, find a README.md file. \
+      If the README exists, update it to reflect the code in the directory, explaining its purpose and showing usage examples. If it is missing, create it. \
+      Finally, summarize your work in a new file named $${SUMMARY_FILE}." \
       --model=${_MODEL} \
       --approval-mode=yolo
 
@@ -119,58 +119,58 @@ steps:
       echo "$${AGENT_NAME} found no documentation to update in ${_DIRECTORY}."
     fi
 
-# - id: 'TestWriterAgent'
-#   name: 'gcr.io/argo-edrienne-test/gemini-cli-node20:latest'
-#   waitFor: ['ConfigureGit']
-#   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
-#   entrypoint: 'bash'
-#   args:
-#   - '-c'
-#   - |
-#     set -ex
-#     # Configure GitHub CLI
-#     echo "$$GITHUB_PAT" | gh auth login --with-token --hostname github.com
-#     gh config set git_protocol https
+- id: 'TestWriterAgent'
+  name: 'gcr.io/argo-edrienne-test/gemini-cli-node20:latest'
+  waitFor: ['ConfigureGit']
+  secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    set -ex
+    # Configure GitHub CLI
+    echo "$$GITHUB_PAT" | gh auth login --with-token --hostname github.com
+    gh config set git_protocol https
 
-#     # Agent-specific variables
-#     AGENT_NAME="TestWriterAgent"
-#     BRANCH_NAME="$${AGENT_NAME}-${BUILD_ID}"
-#     WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
-#     SUMMARY_FILE="$${AGENT_NAME}-changes.md"
-#     COMMIT_MSG="test(ai): Add new unit tests from $${AGENT_NAME} for ${_DIRECTORY}"
+    # Agent-specific variables
+    AGENT_NAME="TestWriterAgent"
+    BRANCH_NAME="$${AGENT_NAME}-${BUILD_ID}"
+    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    SUMMARY_FILE="$${AGENT_NAME}-changes.md"
+    COMMIT_MSG="test(ai): Add new unit tests from $${AGENT_NAME} for ${_DIRECTORY}"
 
-#     # Setup git worktree
-#     git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
-#     cd "$${WORKTREE_PATH}"
+    # Setup git worktree
+    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
+    cd "$${WORKTREE_PATH}"
 
-#     # Run the AI agent
-#     gemini --prompt "You are a senior software engineer in test. Your goal is to increase test coverage for code in the '$${WORKTREE_PATH}/${_DIRECTORY}' directory. \
-#       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory ('$${WORKTREE_PATH}') and MUST NOT use '..' to access parent directories. \
-#       Within these constraints, identify missing unit tests, write them, and ensure they pass. Only keep tests that pass. \
-#       Summarize your work in a new file named $${SUMMARY_FILE}." \
-#       --model=${_MODEL} \
-#       --approval-mode=yolo
+    # Run the AI agent
+    gemini --prompt "You are a senior software engineer in test. Your current working directory is '$${WORKTREE_PATH}'. Your goal is to increase test coverage for code in the '${_DIRECTORY}' subdirectory. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
+      First, run 'ls -R ${_DIRECTORY}' to see the existing code and tests. Then, identify missing unit tests, write them, and ensure they pass. Only keep tests that pass. \
+      Finally, summarize your work in a new file named $${SUMMARY_FILE}." \
+      --model=${_MODEL} \
+      --approval-mode=yolo
 
-#     go test ./$_DIRECTORY/...
+    go test ./$_DIRECTORY/...
 
-#     # Check for changes and create a PR if needed
-#     if [[ -n "$(git status --porcelain)" ]]; then
-#       SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
-#       git add .
-#       git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
-#       git commit -m "$${COMMIT_MSG}"
-#       git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "$${BRANCH_NAME}"
+    # Check for changes and create a PR if needed
+    if [[ -n "$(git status --porcelain)" ]]; then
+      SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
+      git add .
+      git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
+      git commit -m "$${COMMIT_MSG}"
+      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "$${BRANCH_NAME}"
 
-#       # Create the Pull Request
-#       gh pr create \
-#         --repo "${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}" \
-#         --base "ed-multiagent" \
-#         --head "$${BRANCH_NAME}" \
-#         --title "$${COMMIT_MSG}" \
-#         --body "$${SUMMARY_BODY}"
-#     else
-#       echo "$${AGENT_NAME} did not add any new tests in ${_DIRECTORY}."
-#     fi
+      # Create the Pull Request
+      gh pr create \
+        --repo "${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}" \
+        --base "ed-multiagent" \
+        --head "$${BRANCH_NAME}" \
+        --title "$${COMMIT_MSG}" \
+        --body "$${SUMMARY_BODY}"
+    else
+      echo "$${AGENT_NAME} did not add any new tests in ${_DIRECTORY}."
+    fi
 
 - id: 'CodeQualityAgent'
   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
@@ -197,13 +197,13 @@ steps:
     cd "$${WORKTREE_PATH}"
 
     # Run the AI agent
-    gemini --prompt "You are a senior Go engineering agent. Analyze the code in the '$${WORKTREE_PATH}/${_DIRECTORY}' directory. \
-      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory ('$${WORKTREE_PATH}') and MUST NOT use '..' to access parent directories. \
-      Within these constraints, apply these improvements: \
+    gemini --prompt "You are a senior Go engineering agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to improve code quality in the '${_DIRECTORY}' subdirectory. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
+      First, run 'ls -R ${_DIRECTORY}' to see the files. Then, apply these improvements to the code: \
       1. **Refactor:** Improve code elegance and maintainability. \
       2. **Style:** Enforce the Google Go Style Guide. \
       3. **Modernize:** Update any deprecated packages or APIs, checking go.mod. \
-      Summarize your work in a new file named $${SUMMARY_FILE}." \
+      Finally, summarize your work in a new file named $${SUMMARY_FILE}." \
       --model=${_MODEL} \
       --approval-mode=yolo
 
@@ -251,11 +251,11 @@ steps:
     cd "$${WORKTREE_PATH}"
 
     # Run the AI agent
-    gemini --prompt "You are a senior security reviewer agent. Audit the code in the '$${WORKTREE_PATH}/${_DIRECTORY}' directory. \
-      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory ('$${WORKTREE_PATH}') and MUST NOT use '..' to access parent directories. \
-      Within these constraints, find and fix vulnerabilities like hardcoded secrets, SQL injection, or XSS. \
+    gemini --prompt "You are a senior security reviewer agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to audit code in the '${_DIRECTORY}' subdirectory. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
+      First, run 'ls -R ${_DIRECTORY}' to see the files. Then, find and fix vulnerabilities like hardcoded secrets, SQL injection, or XSS. \
       Replace hardcoded credentials with a 'REPLACE_WITH_SECRET_MANAGER_KEY' placeholder. \
-      Summarize your work in a new file named $${SUMMARY_FILE}." \
+      Finally, summarize your work in a new file named $${SUMMARY_FILE}." \
       --model=${_MODEL} \
       --approval-mode=yolo
 
