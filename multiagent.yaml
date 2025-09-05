@@ -1,6 +1,6 @@
 # This Cloud Build file deploys 5 parallel AI agents to work on your codebase.
-# Each agent checks out a new branch, runs Gemini to modify the code for a specific purpose,
-# commits the changes, and pushes the new branch to your GitHub repository.
+# Each agent uses an isolated git worktree to check out a new branch,
+# modify code, and push changes without interfering with other agents.
 
 steps:
 # --- Step 1: Configure Git for all subsequent steps ---
@@ -15,106 +15,152 @@ steps:
     git config --global user.email "cloud-build-bot@google.com"
     git config --global user.name "Cloud Build Bot"
     echo "✅ Git configured globally."
-    
+
 - id: 'BugHunterAgent'
   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-  waitFor: ['ConfigureGit'] # Run in parallel
+  waitFor: ['ConfigureGit'] # Run agents in parallel after git is configured
   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
   entrypoint: 'bash'
   args:
   - '-c'
   - |
     set -ex
-    git checkout -b "BugHunterAgent-${BUILD_ID}"
-    gemini --prompt "You are a senior engineering agent. Analyze the code within the '${_DIRECTORY}' directory for potential bugs, including race conditions, null pointer exceptions, and logical flaws. If you find any, modify the code to fix them directly. Make sure you adjust any unit tests as necessary, and make sure those tests pass. Please summarize what you did in a file called BugHunterAgent-changes.md" --approval-mode=yolo
-    # Only commit and push if the agent made changes
+    BRANCH_NAME="BugHunterAgent-${BUILD_ID}"
+    WORKTREE_DIR="/workspace/${BRANCH_NAME}"
+
+    git worktree add -b "${BRANCH_NAME}" "${WORKTREE_DIR}"
+    cd "${WORKTREE_DIR}"
+
+    gemini --prompt "You are a senior engineering agent. Analyze the code within the '${_DIRECTORY}' directory \
+      for potential bugs, including race conditions, null pointer exceptions, and logical flaws. \
+      If you find any, modify the code to fix them directly. Make sure you adjust any unit tests as necessary, \
+      and make sure those tests pass. Please summarize what you did in a file called BugHunterAgent-changes.md" \
+      --approval-mode=yolo
+    
     if ! git diff --quiet; then
       git add .
       git commit -m "fix(ai): Automated bug fixes from BugHunterAgent in ${_DIRECTORY}"
-      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "BugHunterAgent-${BUILD_ID}"
+      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "${BRANCH_NAME}"
     else
       echo "BugHunterAgent found no issues to fix in ${_DIRECTORY}."
     fi
 
-# - id: 'DocWriterAgent'
-#   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-#   waitFor: ['ConfigureGit'] # Run in parallel
-#   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
-#   entrypoint: 'bash'
-#   args:
-#   - '-c'
-#   - |
-#     set -ex
-#     git checkout -b "DocWriterAgent-${BUILD_ID}"
-#     gemini --prompt "You are a senior technical writer agent. Scan the '${_DIRECTORY}' directory for a README.md file. Update it to fully reflect the code in that specific directory. Ensure it explains the code's purpose, lists public functions or API endpoints, and provides clear usage examples. If a README.md is missing in '${_DIRECTORY}', create one there." --approval-mode=yolo
-#     if ! git diff --quiet; then
-#       git add .
-#       git commit -m "docs(ai): Automated documentation updates from DocWriterAgent in ${_DIRECTORY}"
-#       git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "DocWriterAgent-${BUILD_ID}"
-#     else
-#       echo "DocWriterAgent found no documentation to update in ${_DIRECTORY}."
-#     fi
-
-# - id: 'TestWriterAgent'
-#   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-#   waitFor: ['ConfigureGit'] # Run in parallel
-#   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
-#   entrypoint: 'bash'
-#   args:
-#   - '-c'
-#   - |
-#     set -ex
-#     git checkout -b "TestWriterAgent-${BUILD_ID}"
-#     gemini --prompt "You are a senior software engineer in test. Your goal is to increase test coverage for the code in the '${_DIRECTORY}' directory. Identify critical code paths missing unit tests within that directory, write the necessary test files, and add them. After writing the tests, run them to ensure they pass and correctly validate behavior. Only keep tests that pass. Summarize the changes in TestWriterAgent-changes.md" --approval-mode=yolo
-#     # Run tests only in the specified directory
-#     go test ./$${_DIRECTORY}/...
-#     if ! git diff --quiet; then
-#       git add .
-#       git commit -m "test(ai): Add new unit tests from TestWriterAgent for ${_DIRECTORY}"
-#       git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "TestWriterAgent-${BUILD_ID}"
-#     else
-#       echo "TestWriterAgent did not add any new tests in ${_DIRECTORY}."
-#     fi
-
-# --- Combined Code Quality Agent ---
-- id: 'CodeQualityAgent'
+- id: 'DocWriterAgent'
   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-  waitFor: ['ConfigureGit'] # Run in parallel
+  waitFor: ['ConfigureGit'] # Run agents in parallel
   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
   entrypoint: 'bash'
   args:
   - '-c'
   - |
     set -ex
-    git checkout -b "CodeQualityAgent-${BUILD_ID}"
-    gemini --prompt "You are a senior engineering agent specializing in Go code quality. Your task is to analyze the code within the '${_DIRECTORY}' directory and apply three types of improvements:
-    1. **Refactor:** Identify and refactor long methods, complex logic, or tightly coupled components to improve code elegance and maintainability without changing external behavior.
-    2. **Style:** Enforce the best practices from the Google Go Style Guide (https://google.github.io/styleguide/go/best-practices.html). Correct any deviations in formatting, naming, error handling, and other style rules.
-    3. **Modernize:** Scan dependencies (e.g., go.mod) and source code for usage of deprecated packages or API calls. Replace them with modern alternatives, ensuring the code remains functional.
-    4. Summarize the changes in CodeQualityAgent-changes.md" --approval-mode=yolo
+    BRANCH_NAME="DocWriterAgent-${BUILD_ID}"
+    WORKTREE_DIR="/workspace/${BRANCH_NAME}"
+
+    git worktree add -b "${BRANCH_NAME}" "${WORKTREE_DIR}"
+    cd "${WORKTREE_DIR}"
+
+    gemini --prompt "You are a senior technical writer agent. Scan the '${_DIRECTORY}' directory for a README.md file. \
+      Update it to fully reflect the code in that specific directory. Ensure it explains the code's purpose, \
+      lists public functions or API endpoints, and provides clear usage examples. \
+      If a README.md is missing in '${_DIRECTORY}', create one there." \
+      --approval-mode=yolo
+    
+    if ! git diff --quiet; then
+      git add .
+      git commit -m "docs(ai): Automated documentation updates from DocWriterAgent in ${_DIRECTORY}"
+      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "${BRANCH_NAME}"
+    else
+      echo "DocWriterAgent found no documentation to update in ${_DIRECTORY}."
+    fi
+
+- id: 'TestWriterAgent'
+  name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
+  waitFor: ['ConfigureGit'] # Run agents in parallel
+  secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    set -ex
+    BRANCH_NAME="TestWriterAgent-${BUILD_ID}"
+    WORKTREE_DIR="/workspace/${BRANCH_NAME}"
+
+    git worktree add -b "${BRANCH_NAME}" "${WORKTREE_DIR}"
+    cd "${WORKTREE_DIR}"
+
+    gemini --prompt "You are a senior software engineer in test. Your goal is to increase test coverage for the code \
+      in the '${_DIRECTORY}' directory. Identify critical code paths missing unit tests within that directory, \
+      write the necessary test files, and add them. After writing the tests, run them to ensure they pass \
+      and correctly validate behavior. Only keep tests that pass. Summarize the changes in TestWriterAgent-changes.md" \
+      --approval-mode=yolo
+    
+    go test ./$${_DIRECTORY}/...
+    
+    if ! git diff --quiet; then
+      git add .
+      git commit -m "test(ai): Add new unit tests from TestWriterAgent for ${_DIRECTORY}"
+      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "${BRANCH_NAME}"
+    else
+      echo "TestWriterAgent did not add any new tests in ${_DIRECTORY}."
+    fi
+
+- id: 'CodeQualityAgent'
+  name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
+  waitFor: ['ConfigureGit'] # Run agents in parallel
+  secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    set -ex
+    BRANCH_NAME="CodeQualityAgent-${BUILD_ID}"
+    WORKTREE_DIR="/workspace/${BRANCH_NAME}"
+
+    git worktree add -b "${BRANCH_NAME}" "${WORKTREE_DIR}"
+    cd "${WORKTREE_DIR}"
+
+    gemini --prompt "You are a senior engineering agent specializing in Go code quality. Your task is to analyze the \
+      code within the '${_DIRECTORY}' directory and apply three types of improvements: \
+      1. **Refactor:** Identify and refactor long methods, complex logic, or tightly coupled components to improve code elegance and maintainability without changing external behavior. \
+      2. **Style:** Enforce the best practices from the Google Go Style Guide (https://google.github.io/styleguide/go/best-practices.html). Correct any deviations in formatting, naming, error handling, and other style rules. \
+      3. **Modernize:** Scan dependencies (e.g., go.mod) and source code for usage of deprecated packages or API calls. Replace them with modern alternatives, ensuring the code remains functional. \
+      4. Summarize the changes in CodeQualityAgent-changes.md" \
+      --approval-mode=yolo
+    
     if ! git diff --quiet; then
       git add .
       git commit -m "refactor(ai): Apply automated code quality improvements in ${_DIRECTORY}"
-      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "CodeQualityAgent-${BUILD_ID}"
+      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "${BRANCH_NAME}"
     else
       echo "CodeQualityAgent found no improvements to make in ${_DIRECTORY}."
     fi
 
 - id: 'SecurityAgent'
   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-  waitFor: ['ConfigureGit'] # Run in parallel
+  waitFor: ['ConfigureGit'] # Run agents in parallel
   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
   entrypoint: 'bash'
   args:
   - '-c'
   - |
     set -ex
-    git checkout -b "SecurityAgent-${BUILD_ID}"
-    gemini --prompt "You are a senior security reviewer agent. Audit the code within the '${_DIRECTORY}' directory for hardcoded API keys/secrets, Cloud Storage bucket squatting, SQL injection points, and XSS vulnerabilities. If you find hardcoded credentials, replace them with a placeholder like 'REPLACE_WITH_SECRET_MANAGER_KEY' and add a TODO. Patch other vulnerabilities directly. Summarize the changes in SecurityAgent-changes.md" --approval-mode=yolo
+    BRANCH_NAME="SecurityAgent-${BUILD_ID}"
+    WORKTREE_DIR="/workspace/${BRANCH_NAME}"
+
+    git worktree add -b "${BRANCH_NAME}" "${WORKTREE_DIR}"
+    cd "${WORKTREE_DIR}"
+
+    gemini --prompt "You are a senior security reviewer agent. Audit the code within the '${_DIRECTORY}' directory \
+      for hardcoded API keys/secrets, Cloud Storage bucket squatting, SQL injection points, and XSS vulnerabilities. \
+      If you find hardcoded credentials, replace them with a placeholder like 'REPLACE_WITH_SECRET_MANAGER_KEY' \
+      and add a TODO. Patch other vulnerabilities directly. Summarize the changes in SecurityAgent-changes.md" \
+      --approval-mode=yolo
+    
     if ! git diff --quiet; then
       git add .
       git commit -m "security(ai): Automated security fixes from SecurityAgent in ${_DIRECTORY}"
-      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "SecurityAgent-${BUILD_ID}"
+      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "${BRANCH_NAME}"
     else
       echo "SecurityAgent found no security issues in ${_DIRECTORY}."
     fi
@@ -123,7 +169,7 @@ steps:
 
 # Use more CPU to make it faster
 options:
- machineType: 'E2_HIGHCPU_32'
+  machineType: 'E2_HIGHCPU_32'
 
 # Secrets to make available as environment variables for all steps.
 availableSecrets:
