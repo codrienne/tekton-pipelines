@@ -75,7 +75,7 @@ steps:
     fi
 
 - id: 'TestWriterAgent'
-  name: 'gcr.io/project/gemini-cli-node20:latest'
+  name: 'gcr.io/argo-edrienne-test/gemini-cli-node20:latest'
   waitFor: ['ConfigureGit']
   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
   entrypoint: 'bash'
