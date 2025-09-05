@@ -11,7 +11,7 @@ steps:
     git config --global user.email "cloud-build-bot@google.com"
     git config --global user.name "Cloud Build Bot (Bug Hunter)"
     git checkout -b "BugHunterAgent-${BUILD_ID}"
-    gemini --prompt "You are a senior engineering agent. Analyze the code within the '${_DIRECTORY}' directory for potential bugs, including race conditions, null pointer exceptions, and logical flaws. If you find any, modify the code to fix them directly." --approval-mode=yolo
+    gemini --prompt "You are a senior engineering agent. Analyze the code within the '${_DIRECTORY}' directory for potential bugs, including race conditions, null pointer exceptions, and logical flaws. If you find any, modify the code to fix them directly. Please summarize what you did in a file called BugHunterAgent-changes.md" --approval-mode=yolo
     # Only commit and push if the agent made changes
     if ! git diff --quiet; then
       git add .
@@ -20,24 +20,7 @@ steps:
     else
       echo "BugHunterAgent found no issues to fix in ${_DIRECTORY}."
     fi
-
-# This new step runs 'ls' every 5 seconds for 5 minutes.
-- id: 'ContinuousListAgent'
-  name: 'ubuntu'
-  waitFor: ['-'] # Run in parallel
-  entrypoint: 'bash'
-  args:
-    - '-c'
-    - |
-      set -e
-      echo "This step will list files every 5 seconds for 5 minutes."
-      end_time=$$(($$(date +%s) + 300)) # 300 seconds = 5 minutes
-      while [ $$(date +%s) -lt $$end_time ]; do
-        echo "--- Listing files at $$(date) ---"
-        ls -la
-        sleep 5
-      done
-      echo "5 minutes have passed. Step complete."    
+ 
 
 # --- Configuration ---
 
