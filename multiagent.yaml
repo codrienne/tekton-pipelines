@@ -15,7 +15,7 @@ steps:
     git config --global user.email "cloud-build-bot@google.com"
     git config --global user.name "Cloud Build Bot (Bug Hunter)"
     git checkout -b "BugHunterAgent-${BUILD_ID}"
-    gemini --prompt "You are a senior engineering agent. Analyze the code within the '${_DIRECTORY}' directory for potential bugs, including race conditions, null pointer exceptions, and logical flaws. If you find any, modify the code to fix them directly." --approval-mode=yolo
+    gemini --prompt "You are a senior engineering agent. Analyze the code within the '${_DIRECTORY}' directory for potential bugs, including race conditions, null pointer exceptions, and logical flaws. If you find any, modify the code to fix them directly. Make sure you adjust any unit tests as necessary, and make sure those tests pass. Please summarize what you did in a file called BugHunterAgent-changes.md" --approval-mode=yolo
     # Only commit and push if the agent made changes
     if ! git diff --quiet; then
       git add .
@@ -58,7 +58,7 @@ steps:
     git config --global user.email "cloud-build-bot@google.com"
     git config --global user.name "Cloud Build Bot (Test Writer)"
     git checkout -b "TestWriterAgent-${BUILD_ID}"
-    gemini --prompt "You are a senior software engineer in test. Your goal is to increase test coverage for the code in the '${_DIRECTORY}' directory. Identify critical code paths missing unit tests within that directory, write the necessary test files, and add them. After writing the tests, run them to ensure they pass and correctly validate behavior. Only keep tests that pass." --approval-mode=yolo
+    gemini --prompt "You are a senior software engineer in test. Your goal is to increase test coverage for the code in the '${_DIRECTORY}' directory. Identify critical code paths missing unit tests within that directory, write the necessary test files, and add them. After writing the tests, run them to ensure they pass and correctly validate behavior. Only keep tests that pass. Summarize the changes in TestWriterAgent-changes.md" --approval-mode=yolo
     # Run tests only in the specified directory
     go test ./$${_DIRECTORY}/...
     if ! git diff --quiet; then
@@ -85,7 +85,8 @@ steps:
     gemini --prompt "You are a senior engineering agent specializing in Go code quality. Your task is to analyze the code within the '${_DIRECTORY}' directory and apply three types of improvements:
     1. **Refactor:** Identify and refactor long methods, complex logic, or tightly coupled components to improve code elegance and maintainability without changing external behavior.
     2. **Style:** Enforce the best practices from the Google Go Style Guide (https://google.github.io/styleguide/go/best-practices.html). Correct any deviations in formatting, naming, error handling, and other style rules.
-    3. **Modernize:** Scan dependencies (e.g., go.mod) and source code for usage of deprecated packages or API calls. Replace them with modern alternatives, ensuring the code remains functional." --approval-mode=yolo
+    3. **Modernize:** Scan dependencies (e.g., go.mod) and source code for usage of deprecated packages or API calls. Replace them with modern alternatives, ensuring the code remains functional.
+    4. Summarize the changes in CodeQualityAgent-changes.md" --approval-mode=yolo
     if ! git diff --quiet; then
       git add .
       git commit -m "refactor(ai): Apply automated code quality improvements in ${_DIRECTORY}"
@@ -106,7 +107,7 @@ steps:
     git config --global user.email "cloud-build-bot@google.com"
     git config --global user.name "Cloud Build Bot (Security Agent)"
     git checkout -b "SecurityAgent-${BUILD_ID}"
-    gemini --prompt "You are a senior security reviewer agent. Audit the code within the '${_DIRECTORY}' directory for hardcoded API keys/secrets, Cloud Storage bucket squatting, SQL injection points, and XSS vulnerabilities. If you find hardcoded credentials, replace them with a placeholder like 'REPLACE_WITH_SECRET_MANAGER_KEY' and add a TODO. Patch other vulnerabilities directly." --approval-mode=yolo
+    gemini --prompt "You are a senior security reviewer agent. Audit the code within the '${_DIRECTORY}' directory for hardcoded API keys/secrets, Cloud Storage bucket squatting, SQL injection points, and XSS vulnerabilities. If you find hardcoded credentials, replace them with a placeholder like 'REPLACE_WITH_SECRET_MANAGER_KEY' and add a TODO. Patch other vulnerabilities directly. Summarize the changes in SecurityAgent-changes.md" --approval-mode=yolo
     if ! git diff --quiet; then
       git add .
       git commit -m "security(ai): Automated security fixes from SecurityAgent in ${_DIRECTORY}"
@@ -116,6 +117,10 @@ steps:
     fi
 
 # --- Configuration ---
+
+# Use more CPU to make it faster
+options:
+ machineType: 'E2_HIGHCPU_32'
 
 # Secrets to make available as environment variables for all steps.
 availableSecrets:
