@@ -654,36 +654,38 @@ func filter(arr []string, cond func(string) bool) []string {
 	return result
 }
 
-// validatePipelineResults ensure that pipeline result variables are properly configured
+// validatePipelineResults ensures that pipeline result variables are properly configured.
 func validatePipelineResults(results []PipelineResult, tasks []PipelineTask, finally []PipelineTask) (errs *apis.FieldError) {
-	pipelineTaskNames := getPipelineTasksNames(tasks)
-	pipelineFinallyTaskNames := getPipelineTasksNames(finally)
-	for idx, result := range results {
-		expressions, ok := result.GetVarSubstitutionExpressions()
-		if !ok {
-			errs = errs.Also(apis.ErrInvalidValue("expected pipeline results to be task result expressions but no expressions were found",
-				"value").ViaFieldIndex("results", idx))
-		}
+	taskNames := getPipelineTasksNames(tasks)
+	finallyTaskNames := getPipelineTasksNames(finally)
+	for i, result := range results {
+		errs = errs.Also(validatePipelineResult(result, taskNames, finallyTaskNames).ViaFieldIndex("results", i))
+	}
+	return errs
+}
 
-		if !LooksLikeContainsResultRefs(expressions) {
-			errs = errs.Also(apis.ErrInvalidValue("expected pipeline results to be task result expressions but an invalid expressions was found",
-				"value").ViaFieldIndex("results", idx))
-		}
-
-		expressions = filter(expressions, resultref.LooksLikeResultRef)
-		resultRefs := NewResultRefs(expressions)
-		if len(expressions) != len(resultRefs) {
-			errs = errs.Also(apis.ErrInvalidValue(fmt.Sprintf("expected all of the expressions %v to be result expressions but only %v were", expressions, resultRefs),
-				"value").ViaFieldIndex("results", idx))
-		}
-
-		if !taskContainsResult(result.Value.StringVal, pipelineTaskNames, pipelineFinallyTaskNames) {
-			errs = errs.Also(apis.ErrInvalidValue("referencing a nonexistent task",
-				"value").ViaFieldIndex("results", idx))
-		}
+// validatePipelineResult validates a single pipeline result.
+func validatePipelineResult(result PipelineResult, taskNames, finallyTaskNames sets.String) *apis.FieldError {
+	expressions, ok := result.GetVarSubstitutionExpressions()
+	if !ok {
+		return apis.ErrInvalidValue("expected pipeline results to be task result expressions but no expressions were found", "value")
 	}
 
-	return errs
+	if !LooksLikeContainsResultRefs(expressions) {
+		return apis.ErrInvalidValue("expected pipeline results to be task result expressions but an invalid expression was found", "value")
+	}
+
+	expressions = filter(expressions, resultref.LooksLikeResultRef)
+	resultRefs := NewResultRefs(expressions)
+	if len(expressions) != len(resultRefs) {
+		return apis.ErrInvalidValue(fmt.Sprintf("expected all expressions %v to be result expressions but only %v were", expressions, resultRefs), "value")
+	}
+
+	if !taskContainsResult(result.Value.StringVal, taskNames, finallyTaskNames) {
+		return apis.ErrInvalidValue("referencing a nonexistent task", "value")
+	}
+
+	return nil
 }
 
 // put task names in a set
