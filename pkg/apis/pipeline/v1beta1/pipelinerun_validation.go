@@ -411,47 +411,45 @@ func validateTaskRunSpecTimeout(ctx context.Context, timeout *metav1.Duration, p
 	var errs *apis.FieldError
 
 	// Validate basic timeout (negative values)
-	_, err := validateTimeout(timeout, cfg.Defaults.DefaultTimeoutMinutes)
+	taskRunTimeout, err := validateTimeout(timeout, cfg.Defaults.DefaultTimeoutMinutes)
 	if err != nil {
 		errs = errs.Also(err)
+		return errs // No point in continuing if the timeout itself is invalid
 	}
 
-	// Validate timeout against effective pipeline timeout (explicit or default)
-	if err == nil {
-		// Find applicable timeout limit: Tasks -> Pipeline -> Default (60min)
-		var maxTimeout *metav1.Duration
-		var timeoutSource string
+	// Find applicable timeout limit: Tasks -> Pipeline -> Default (60min)
+	var maxTimeout *metav1.Duration
+	var timeoutSource string
 
-		switch {
-		case pipelineTimeouts != nil && pipelineTimeouts.Tasks != nil:
-			if validatedTimeout, err := validateTimeout(pipelineTimeouts.Tasks, cfg.Defaults.DefaultTimeoutMinutes); err != nil {
-				// Add error if Tasks timeout is invalid (prevents silent failures)
-				errs = errs.Also(err)
-			} else {
-				maxTimeout = validatedTimeout
-				timeoutSource = "pipeline tasks duration"
-			}
-		case pipelineTimeouts != nil && pipelineTimeouts.Pipeline != nil:
-			if validatedTimeout, err := validateTimeout(pipelineTimeouts.Pipeline, cfg.Defaults.DefaultTimeoutMinutes); err != nil {
-				// Add error if Pipeline timeout is invalid (prevents silent failures)
-				errs = errs.Also(err)
-			} else {
-				maxTimeout = validatedTimeout
-				timeoutSource = "pipeline duration"
-			}
-		default:
-			maxTimeout = &metav1.Duration{Duration: time.Duration(cfg.Defaults.DefaultTimeoutMinutes) * time.Minute}
-			timeoutSource = "default pipeline duration"
+	if pipelineTimeouts != nil && pipelineTimeouts.Tasks != nil {
+		if validatedTimeout, err := validateTimeout(pipelineTimeouts.Tasks, cfg.Defaults.DefaultTimeoutMinutes); err != nil {
+			errs = errs.Also(err.ViaField("timeouts.tasks"))
+		} else {
+			maxTimeout = validatedTimeout
+			timeoutSource = "pipeline tasks duration"
 		}
+	}
 
-		// Always check against max timeout if it's not "no timeout"
-		if maxTimeout != nil && maxTimeout.Duration != config.NoTimeoutDuration {
-			taskRunTimeout, _ := validateTimeout(timeout, cfg.Defaults.DefaultTimeoutMinutes) // We know this won't error from above
-			if taskRunTimeout.Duration > maxTimeout.Duration {
-				errs = errs.Also(apis.ErrInvalidValue(
-					fmt.Sprintf("%s should be <= %s %s", taskRunTimeout.Duration, timeoutSource, maxTimeout.Duration),
-					"timeout"))
-			}
+	if maxTimeout == nil && pipelineTimeouts != nil && pipelineTimeouts.Pipeline != nil {
+		if validatedTimeout, err := validateTimeout(pipelineTimeouts.Pipeline, cfg.Defaults.DefaultTimeoutMinutes); err != nil {
+			errs = errs.Also(err.ViaField("timeouts.pipeline"))
+		} else {
+			maxTimeout = validatedTimeout
+			timeoutSource = "pipeline duration"
+		}
+	}
+
+	if maxTimeout == nil {
+		maxTimeout = &metav1.Duration{Duration: time.Duration(cfg.Defaults.DefaultTimeoutMinutes) * time.Minute}
+		timeoutSource = "default pipeline duration"
+	}
+
+	// Always check against max timeout if it's not "no timeout"
+	if maxTimeout.Duration != config.NoTimeoutDuration {
+		if taskRunTimeout.Duration > maxTimeout.Duration {
+			errs = errs.Also(apis.ErrInvalidValue(
+				fmt.Sprintf("%s should be <= %s %s", taskRunTimeout.Duration, timeoutSource, maxTimeout.Duration),
+				"timeout"))
 		}
 	}
 
