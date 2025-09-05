@@ -226,10 +226,6 @@ steps:
 
 # --- Configuration ---
 
-# Use more CPU to make it faster
-options:
-  machineType: 'E2_HIGHCPU_32'
-
 # Secrets to make available as environment variables for all steps.
 availableSecrets:
   secretManager:
