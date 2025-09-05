@@ -11,7 +11,7 @@ steps:
     git config --global user.email "cloud-build-bot@google.com"
     git config --global user.name "Cloud Build Bot (Bug Hunter)"
     git checkout -b "BugHunterAgent-${BUILD_ID}"
-    gemini --prompt "You are a senior engineering agent. Analyze the code within the '${_DIRECTORY}' directory for potential bugs, including race conditions, null pointer exceptions, and logical flaws. If you find any, modify the code to fix them directly. Please summarize what you did in a file called BugHunterAgent-changes.md" --approval-mode=yolo
+    gemini --prompt "You are a senior engineering agent. Analyze the code within the '${_DIRECTORY}' directory for potential bugs, including race conditions, null pointer exceptions, and logical flaws. If you find any, modify the code to fix them directly. Make sure you adjust any unit tests as necessary, and make sure those tests pass. Please summarize what you did in a file called BugHunterAgent-changes.md" --approval-mode=yolo
     # Only commit and push if the agent made changes
     if ! git diff --quiet; then
       git add .
