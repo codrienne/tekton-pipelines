@@ -1,49 +1,27 @@
 steps:
-  # Step 1: Your original step to create a random file.
+  # Step 1: A single Gemini step to analyze the commit and update relevant READMEs.
   - name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-    id: GeminiModifyAndList
+    id: GeminiUpdateReadmes
     args:
-    - '--approval-mode=yolo'
-    - '--prompt'
-    - "Create a file that is called Matt-${BUILD_ID}, make it a txt file, and inside of it write Here is your random file!!!"
-    - '--debug'
+      - '--approval-mode=yolo'
+      - '--prompt'
+      - >- # Using >- allows for a clean multi-line prompt
+        You are an automated technical writer agent. Your task is to keep documentation synchronized with the latest code changes.
+        1. First, identify all source code files that were modified in the most recent commit.
+        2. For each modified file (ignoring changes to README.md files), find the corresponding README.md file located in the exact same directory.
+        3. Analyze the code changes within the modified file (such as new functions, updated parameters, or bug fixes).
+        4. Based on your analysis, intelligently update the corresponding README.md to accurately document these changes.
+        5. If a README.md does not exist in the same directory as a modified file, you must take no action for that file.
     secretEnv: ['GEMINI_API_KEY']
 
-  # Step 2: Your original step to analyze Go code style.
-  - name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-    id: GeminiCreateCoolReadME
-    args:
-    - '--approval-mode=yolo'
-    - '--prompt'
-    - "look in specific folder path: pkg/apis/pipeline and analyze the code against https://google.github.io/styleguide/go/best-practices.html create a report about your findings and explain the practices that this code is NOT following please reply with written suggestions on good ways that we can improve this code "
-    - '--debug'
-    secretEnv: ['GEMINI_API_KEY']
-    waitFor: ['-'] # Starts at the same time as the first step
-
-  # MODIFICATION: New step to audit all README files in the repository.
-  - name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-    id: GeminiAuditDocumentation
-    args:
-    - '--approval-mode=yolo'
-    - '--prompt'
-    - >- # Using >- allows for a clean multi-line prompt
-      You are an automated documentation quality assurance agent. Your goal is to ensure all README.md files are accurate and consistent with the latest code changes.
-      1. Analyze Code Changes: First, identify all source code files that have been modified.
-      2. Locate All READMEs: Scan the repository and find every file named README.md.
-      3. Verify Documentation Accuracy: For each modified source file, cross-reference the changes with the documentation in the most relevant README.md file. Look for specific inconsistencies like missing documentation for new features, outdated examples, incorrect function signatures, or removed features.
-      4. Generate a Report: Create a new file named DOC_AUDIT.md. If no issues are found, the file should contain "✅ Documentation Audit Passed: All README files are consistent with the code changes." Otherwise, for each issue, detail the file, the problem, your reasoning, and a suggested update.
-    - '--debug'
-    secretEnv: ['GEMINI_API_KEY']
-    waitFor: ['GeminiCreateCoolReadME'] # Waits for the previous step to finish
-
-  # Step to list files in the workspace to verify changes.
+  # Step 2: List the files in the workspace to verify the changes made by Gemini.
   - name: 'ubuntu'
     id: ListFiles
     entrypoint: 'ls'
-    args: ['-la']
-    waitFor: ['GeminiAuditDocumentation'] # Waits for the new audit step
+    args: ['-laR'] # Using -laR to list files recursively for better visibility
+    waitFor: ['GeminiUpdateReadmes']
 
-  # Step to commit and push all changes (including the new audit report) to a new branch.
+  # Step 3: Commit the updated README files and push them to a new branch.
   - name: 'gcr.io/cloud-builders/git'
     id: 'Push to New Branch'
     secretEnv: ['GITHUB_PAT']
@@ -53,25 +31,26 @@ steps:
       - |
         set -ex
 
+        # Configure Git with a bot identity for the commit
         git config --global user.email "cloud-build-bot@google.com"
         git config --global user.name "Cloud Build Bot"
 
-        git checkout -b "${_BRANCH_NAME}-${BUILD_ID}"
-        echo "✅ Switched to new branch: ${_BRANCH_NAME}-${BUILD_ID}"
+        # Create a new branch with a unique name based on the build ID
+        git checkout -b "${_BRANCH_NAME}-${SHORT_SHA}"
+        echo "✅ Switched to new branch: ${_BRANCH_NAME}-${SHORT_SHA}"
 
+        # Add all changes (the updated READMEs) and commit them
+        # The '|| exit 0' part prevents the build from failing if there are no changes to commit
         git add . || exit 0
-        git commit -m "feat: Automated changes and documentation audit from Cloud Build" || exit 0
-        echo "🔒 Committed changes."
+        git commit -m "docs: Automatically update READMEs based on code changes" || exit 0
+        echo "🔒 Committed documentation updates."
 
-        git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "${_BRANCH_NAME}-${BUILD_ID}"
-        echo "🚀 Pushed changes to origin/${_BRANCH_NAME}-${BUILD_ID}"
+        # Push the new branch to the GitHub repository using the PAT for authentication
+        git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "${_BRANCH_NAME}-${SHORT_SHA}"
+        echo "🚀 Pushed changes to origin/${_BRANCH_NAME}-${SHORT_SHA}"
     waitFor: ['ListFiles']
 
-  # # Step to upload the workspace to Google Cloud Storage.
-  # - name: 'gcr.io/cloud-builders/gsutil'
-  #   id: UploadToGCS
-  #   args: ['cp', '-r', '/workspace', 'gs://$_BUCKET_NAME/$BUILD_ID']
-
+# Secrets to make available to the build steps
 availableSecrets:
   secretManager:
   - versionName: projects/$PROJECT_ID/secrets/$_SECRET_NAME/versions/latest
@@ -79,12 +58,13 @@ availableSecrets:
   - versionName: projects/32289313582/secrets/ed-tekton-pipelines-token/versions/1
     env: 'GITHUB_PAT'
 
+# Optional: List of images to push after the build
 images:
   - 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
 
+# User-defined variables for the build
 substitutions:
   _SECRET_NAME: 'ed-gemini-api-key'
-  _BUCKET_NAME: 'ed-gemini'
-  _BRANCH_NAME: 'Matt-Doc-Audit' # Changed branch name slightly for clarity
+  _BRANCH_NAME: 'auto-doc-update' # Updated branch name for clarity
   _GITHUB_REPO_OWNER: 'codrienne'
   _GITHUB_REPO_NAME: 'tekton-pipelines'
