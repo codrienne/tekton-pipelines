@@ -280,6 +280,12 @@ Further documentation available:
 - **Initial Release**: [v0.37.0][v0-37-0] (2022-06-21)
 - **End of Life**: 2022-10-20
 
+### v0.38
+
+- **Latest Release**: [v0.38.5][v0-37-5] (2025-09-02) ([docs][v0-38-5-docs], [examples][v0-38-5-examples])
+- **Initial Release**: [v0.38.0][v0-37-0] (2025-09-02)
+- **End of Life**: -
+
 Older releases are EOL and available on [GitHub][tekton-pipeline-releases].
 
 [release-policy]: https://github.com/tektoncd/community/blob/main/releases.md
