@@ -64,7 +64,7 @@ images:
 
 # User-defined variables for the build
 substitutions:
-  _SECRET_NAME: 'ed-gemini-api-key'
+  _SECRET_NAME: 'Matt-gemini-api-key'
   _BRANCH_NAME: 'auto-doc-update' # Updated branch name for clarity
   _GITHUB_REPO_OWNER: 'codrienne'
   _GITHUB_REPO_NAME: 'tekton-pipelines'
