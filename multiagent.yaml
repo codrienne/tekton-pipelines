@@ -298,7 +298,7 @@ availableSecrets:
 
 # User-defined substitutions to pass variables into the build.
 substitutions:
-  _MODEL: 'gemini-2.5-flash'
+  _MODEL: 'gemini-1.5-flash' # 'gemini-2.5-flash' # gemini-2.5-pro
   _SECRET_NAME_GEMINI: 'ed-gemini-argo-local-edrienne-key'
   _SECRET_NAME_GITHUB: 'ed-tekton-pipelines-token'
   _GITHUB_REPO_OWNER: 'codrienne'
