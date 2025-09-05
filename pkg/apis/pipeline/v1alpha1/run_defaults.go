@@ -39,7 +39,7 @@ func (rs *RunSpec) SetDefaults(ctx context.Context) {
 		rs.ServiceAccountName = defaultSA
 	}
 	defaultPodTemplate := cfg.Defaults.DefaultPodTemplate
-	if rs.PodTemplate == nil {
-		rs.PodTemplate = defaultPodTemplate
+	if rs.PodTemplate == nil && defaultPodTemplate != nil {
+		rs.PodTemplate = defaultPodTemplate.DeepCopy()
 	}
 }
