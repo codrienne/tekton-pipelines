@@ -2,18 +2,30 @@
 # Each agent checks out a new branch, runs Gemini to modify the code for a specific purpose,
 # commits the changes, and pushes the new branch to your GitHub repository.
 
+# --- Step 1: Configure Git for all subsequent steps ---
+- id: 'ConfigureGit'
+  name: 'gcr.io/cloud-builders/git'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    set -ex
+    # Configure git for the entire build
+    git config --global user.email "cloud-build-bot@google.com"
+    git config --global user.name "Cloud Build Bot"
+    echo "✅ Git configured globally."
+
+
 steps:
 - id: 'BugHunterAgent'
   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-  waitFor: ['-'] # Run in parallel
+  waitFor: ['ConfigureGit'] # Run in parallel
   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
   entrypoint: 'bash'
   args:
   - '-c'
   - |
     set -ex
-    git config --global user.email "cloud-build-bot@google.com"
-    git config --global user.name "Cloud Build Bot (Bug Hunter)"
     git checkout -b "BugHunterAgent-${BUILD_ID}"
     gemini --prompt "You are a senior engineering agent. Analyze the code within the '${_DIRECTORY}' directory for potential bugs, including race conditions, null pointer exceptions, and logical flaws. If you find any, modify the code to fix them directly. Make sure you adjust any unit tests as necessary, and make sure those tests pass. Please summarize what you did in a file called BugHunterAgent-changes.md" --approval-mode=yolo
     # Only commit and push if the agent made changes
@@ -27,15 +39,13 @@ steps:
 
 # - id: 'DocWriterAgent'
 #   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-#   waitFor: ['-'] # Run in parallel
+#   waitFor: ['ConfigureGit'] # Run in parallel
 #   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
 #   entrypoint: 'bash'
 #   args:
 #   - '-c'
 #   - |
 #     set -ex
-#     git config --global user.email "cloud-build-bot@google.com"
-#     git config --global user.name "Cloud Build Bot (Doc Writer)"
 #     git checkout -b "DocWriterAgent-${BUILD_ID}"
 #     gemini --prompt "You are a senior technical writer agent. Scan the '${_DIRECTORY}' directory for a README.md file. Update it to fully reflect the code in that specific directory. Ensure it explains the code's purpose, lists public functions or API endpoints, and provides clear usage examples. If a README.md is missing in '${_DIRECTORY}', create one there." --approval-mode=yolo
 #     if ! git diff --quiet; then
@@ -48,15 +58,13 @@ steps:
 
 # - id: 'TestWriterAgent'
 #   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-#   waitFor: ['-'] # Run in parallel
+#   waitFor: ['ConfigureGit'] # Run in parallel
 #   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
 #   entrypoint: 'bash'
 #   args:
 #   - '-c'
 #   - |
 #     set -ex
-#     git config --global user.email "cloud-build-bot@google.com"
-#     git config --global user.name "Cloud Build Bot (Test Writer)"
 #     git checkout -b "TestWriterAgent-${BUILD_ID}"
 #     gemini --prompt "You are a senior software engineer in test. Your goal is to increase test coverage for the code in the '${_DIRECTORY}' directory. Identify critical code paths missing unit tests within that directory, write the necessary test files, and add them. After writing the tests, run them to ensure they pass and correctly validate behavior. Only keep tests that pass. Summarize the changes in TestWriterAgent-changes.md" --approval-mode=yolo
 #     # Run tests only in the specified directory
@@ -72,15 +80,13 @@ steps:
 # --- Combined Code Quality Agent ---
 - id: 'CodeQualityAgent'
   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-  waitFor: ['-'] # Run in parallel
+  waitFor: ['ConfigureGit'] # Run in parallel
   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
   entrypoint: 'bash'
   args:
   - '-c'
   - |
     set -ex
-    git config --global user.email "cloud-build-bot@google.com"
-    git config --global user.name "Cloud Build Bot (Code Quality)"
     git checkout -b "CodeQualityAgent-${BUILD_ID}"
     gemini --prompt "You are a senior engineering agent specializing in Go code quality. Your task is to analyze the code within the '${_DIRECTORY}' directory and apply three types of improvements:
     1. **Refactor:** Identify and refactor long methods, complex logic, or tightly coupled components to improve code elegance and maintainability without changing external behavior.
@@ -97,15 +103,13 @@ steps:
 
 - id: 'SecurityAgent'
   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-  waitFor: ['-'] # Run in parallel
+  waitFor: ['ConfigureGit'] # Run in parallel
   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
   entrypoint: 'bash'
   args:
   - '-c'
   - |
     set -ex
-    git config --global user.email "cloud-build-bot@google.com"
-    git config --global user.name "Cloud Build Bot (Security Agent)"
     git checkout -b "SecurityAgent-${BUILD_ID}"
     gemini --prompt "You are a senior security reviewer agent. Audit the code within the '${_DIRECTORY}' directory for hardcoded API keys/secrets, Cloud Storage bucket squatting, SQL injection points, and XSS vulnerabilities. If you find hardcoded credentials, replace them with a placeholder like 'REPLACE_WITH_SECRET_MANAGER_KEY' and add a TODO. Patch other vulnerabilities directly. Summarize the changes in SecurityAgent-changes.md" --approval-mode=yolo
     if ! git diff --quiet; then
