@@ -100,11 +100,12 @@ func (r *ResourcePattern) Validate(ctx context.Context) (errs *apis.FieldError) 
 }
 
 // validateHashAlgorithm checks if the algorithm is supported
+// validateHashAlgorithm checks if the algorithm is supported
 func validateHashAlgorithm(algorithmName HashAlgorithm) (errs *apis.FieldError) {
-	normalizedAlgo := strings.ToLower(string(algorithmName))
-	_, exists := SupportedSignatureAlgorithms[HashAlgorithm(normalizedAlgo)]
-	if !exists {
+	switch strings.ToLower(string(algorithmName)) {
+	case "sha224", "sha256", "sha384", "sha512", "":
+		return nil
+	default:
 		return apis.ErrInvalidValue(algorithmName, "HashAlgorithm")
 	}
-	return nil
 }
