@@ -49,7 +49,7 @@ steps:
       --approval-mode=yolo
 
     # Check for changes and create a PR if needed
-    if ! git diff --quiet; then
+    if [[ -n "$(git status --porcelain)" ]]; then
       SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
       git add .
       git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
@@ -101,7 +101,7 @@ steps:
       --approval-mode=yolo
 
     # Check for changes and create a PR if needed
-    if ! git diff --quiet; then
+    if [[ -n "$(git status --porcelain)" ]]; then
       SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
       git add .
       git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
@@ -119,7 +119,6 @@ steps:
       echo "$${AGENT_NAME} found no documentation to update in ${_DIRECTORY}."
     fi
 
-# Comment out TestWriterAgent because I was having too many issues.
 # - id: 'TestWriterAgent'
 #   name: 'gcr.io/argo-edrienne-test/gemini-cli-node20:latest'
 #   waitFor: ['ConfigureGit']
@@ -155,7 +154,7 @@ steps:
 #     go test ./$_DIRECTORY/...
 
 #     # Check for changes and create a PR if needed
-#     if ! git diff --quiet; then
+#     if [[ -n "$(git status --porcelain)" ]]; then
 #       SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
 #       git add .
 #       git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
@@ -209,7 +208,7 @@ steps:
       --approval-mode=yolo
 
     # Check for changes and create a PR if needed
-    if ! git diff --quiet; then
+    if [[ -n "$(git status --porcelain)" ]]; then
       SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
       git add .
       git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
@@ -261,7 +260,7 @@ steps:
       --approval-mode=yolo
 
     # Check for changes and create a PR if needed
-    if ! git diff --quiet; then
+    if [[ -n "$(git status --porcelain)" ]]; then
       SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
       git add .
       git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
@@ -295,9 +294,10 @@ availableSecrets:
 
 # User-defined substitutions to pass variables into the build.
 substitutions:
-  _MODEL: 'gemini-2.5-pro'
+  _MODEL: 'gemini-1.5-flash-latest'
   _SECRET_NAME_GEMINI: 'ed-gemini-argo-local-edrienne-key'
   _SECRET_NAME_GITHUB: 'ed-tekton-pipelines-token'
   _GITHUB_REPO_OWNER: 'codrienne'
   _GITHUB_REPO_NAME: 'tekton-pipelines'
   _DIRECTORY: 'pkg/apis/pipeline/v1' # The directory for the agents to focus on.
+
