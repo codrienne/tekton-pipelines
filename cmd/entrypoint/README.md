@@ -36,8 +36,19 @@ The following flags are available:
 - `-spire_socket_path`: This flag makes sense only when enable_spire is set. 
   When enable_spire is set, spire_socket_path is used to point to the
   SPIRE agent socket for SPIFFE workload API.
+- `-termination_path`: If specified, file to write upon termination
+- `-results`: If specified, list of file names that might contain task results
+- `-step_results`: step results if specified
+- `-when_expressions`: when expressions if specified
+- `-timeout`: If specified, sets timeout for step
+- `-breakpoint_on_failure`: If specified, expect steps to not skip on failure
+- `-debug_before_step`: If specified, wait for a debugger to attach before executing the step
+- `-on_error`: Set to "continue" to ignore an error and continue when a container terminates with a non-zero exit code. Set to "stopAndFail" to declare a failure with a step error and stop executing the rest of the steps.
+- `-step_metadata_dir`: If specified, create directory to store the step metadata e.g. /tekton/steps/<step-name>/
+- `-result_from`: The method using which to extract results from tasks. Default is using the termination message.
 
 Any extra positional arguments are passed to the original entrypoint command.
+If you want to pass flags to the entrypoint command, you can use `--` to separate them from the entrypoint flags. For example, `entrypoint -entrypoint echo -- --help` will pass `--help` to the `echo` command.
 
 ## Example
 
