@@ -38,4 +38,4 @@ substitutions:
   _SECRET_NAME_GITHUB: 'ed-tekton-pipelines-token'
   _GITHUB_REPO_OWNER: 'codrienne'
   _GITHUB_REPO_NAME: 'tekton-pipelines'
-  _DIRECTORY: 'pkg/apis/pipeline/v1' # The directory for the agents to focus on.
+  _DIRECTORY: 'pkg/apis/pipeline/v1beta1' # The directory for the agents to focus on.
