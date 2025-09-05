@@ -5,13 +5,13 @@ steps:
     args:
       - '--approval-mode=yolo'
       - '--prompt'
-      - >- # Using >- allows for a clean multi-line prompt
+      - >-
         You are an automated technical writer agent. Your task is to keep documentation synchronized with the latest code changes.
-        1. First, identify all source code files that were modified in the most recent commit.
-        2. For each modified file (ignoring changes to README.md files), find the corresponding README.md file located in the exact same directory.
-        3. Analyze the code changes within the modified file (such as new functions, updated parameters, or bug fixes).
-        4. Based on your analysis, intelligently update the corresponding README.md to accurately document these changes.
-        5. If a README.md does not exist in the same directory as a modified file, you must take no action for that file.
+        1. First, identify ALL modified files in the most recent commit.
+        2. For each modified file (ignoring changes to README.md files themselves), you must find the most relevant README.md to update.
+        3. To do this, first look for a README.md in the exact same directory as the modified file. If one exists, potentailly update it.
+        4. If no README.md is found, search in the immediate parent directory. Continue searching upwards through the parent directories until a README.md is found or you reach the repository root. Update the FIRST README.md you discover.
+        5. Analyze the code/content changes in the modified file and update the corresponding README.md to accurately document them.
     secretEnv: ['GEMINI_API_KEY']
 
   # Step 2: List the files in the workspace to verify the changes made by Gemini.
