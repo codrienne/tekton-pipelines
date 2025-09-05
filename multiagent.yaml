@@ -26,10 +26,13 @@ steps:
   - |
     set -ex
     BRANCH_NAME="BugHunterAgent-${BUILD_ID}"
-    WORKTREE_DIR="/workspace/${BRANCH_NAME}"
+    WORKTREE_DIR="/workspace/$${BRANCH_NAME}"
 
-    git worktree add -b "${BRANCH_NAME}" "${WORKTREE_DIR}"
-    cd "${WORKTREE_DIR}"
+    # Create an isolated working directory (worktree) for this agent
+    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_DIR}"
+    
+    # Change into the agent's isolated directory to prevent conflicts
+    cd "$${WORKTREE_DIR}"
 
     gemini --prompt "You are a senior engineering agent. Analyze the code within the '${_DIRECTORY}' directory \
       for potential bugs, including race conditions, null pointer exceptions, and logical flaws. \
@@ -40,7 +43,7 @@ steps:
     if ! git diff --quiet; then
       git add .
       git commit -m "fix(ai): Automated bug fixes from BugHunterAgent in ${_DIRECTORY}"
-      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "${BRANCH_NAME}"
+      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "$${BRANCH_NAME}"
     else
       echo "BugHunterAgent found no issues to fix in ${_DIRECTORY}."
     fi
@@ -55,10 +58,10 @@ steps:
   - |
     set -ex
     BRANCH_NAME="DocWriterAgent-${BUILD_ID}"
-    WORKTREE_DIR="/workspace/${BRANCH_NAME}"
+    WORKTREE_DIR="/workspace/$${BRANCH_NAME}"
 
-    git worktree add -b "${BRANCH_NAME}" "${WORKTREE_DIR}"
-    cd "${WORKTREE_DIR}"
+    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_DIR}"
+    cd "$${WORKTREE_DIR}"
 
     gemini --prompt "You are a senior technical writer agent. Scan the '${_DIRECTORY}' directory for a README.md file. \
       Update it to fully reflect the code in that specific directory. Ensure it explains the code's purpose, \
@@ -69,7 +72,7 @@ steps:
     if ! git diff --quiet; then
       git add .
       git commit -m "docs(ai): Automated documentation updates from DocWriterAgent in ${_DIRECTORY}"
-      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "${BRANCH_NAME}"
+      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "$${BRANCH_NAME}"
     else
       echo "DocWriterAgent found no documentation to update in ${_DIRECTORY}."
     fi
@@ -84,10 +87,10 @@ steps:
   - |
     set -ex
     BRANCH_NAME="TestWriterAgent-${BUILD_ID}"
-    WORKTREE_DIR="/workspace/${BRANCH_NAME}"
+    WORKTREE_DIR="/workspace/$${BRANCH_NAME}"
 
-    git worktree add -b "${BRANCH_NAME}" "${WORKTREE_DIR}"
-    cd "${WORKTREE_DIR}"
+    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_DIR}"
+    cd "$${WORKTREE_DIR}"
 
     gemini --prompt "You are a senior software engineer in test. Your goal is to increase test coverage for the code \
       in the '${_DIRECTORY}' directory. Identify critical code paths missing unit tests within that directory, \
@@ -95,12 +98,13 @@ steps:
       and correctly validate behavior. Only keep tests that pass. Summarize the changes in TestWriterAgent-changes.md" \
       --approval-mode=yolo
     
-    go test ./$${_DIRECTORY}/...
+    # CORRECTED: Use a single '$' for the Cloud Build substitution variable _DIRECTORY
+    go test ./$_DIRECTORY/...
     
     if ! git diff --quiet; then
       git add .
       git commit -m "test(ai): Add new unit tests from TestWriterAgent for ${_DIRECTORY}"
-      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "${BRANCH_NAME}"
+      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "$${BRANCH_NAME}"
     else
       echo "TestWriterAgent did not add any new tests in ${_DIRECTORY}."
     fi
@@ -115,10 +119,10 @@ steps:
   - |
     set -ex
     BRANCH_NAME="CodeQualityAgent-${BUILD_ID}"
-    WORKTREE_DIR="/workspace/${BRANCH_NAME}"
+    WORKTREE_DIR="/workspace/$${BRANCH_NAME}"
 
-    git worktree add -b "${BRANCH_NAME}" "${WORKTREE_DIR}"
-    cd "${WORKTREE_DIR}"
+    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_DIR}"
+    cd "$${WORKTREE_DIR}"
 
     gemini --prompt "You are a senior engineering agent specializing in Go code quality. Your task is to analyze the \
       code within the '${_DIRECTORY}' directory and apply three types of improvements: \
@@ -131,7 +135,7 @@ steps:
     if ! git diff --quiet; then
       git add .
       git commit -m "refactor(ai): Apply automated code quality improvements in ${_DIRECTORY}"
-      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "${BRANCH_NAME}"
+      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "$${BRANCH_NAME}"
     else
       echo "CodeQualityAgent found no improvements to make in ${_DIRECTORY}."
     fi
@@ -146,10 +150,10 @@ steps:
   - |
     set -ex
     BRANCH_NAME="SecurityAgent-${BUILD_ID}"
-    WORKTREE_DIR="/workspace/${BRANCH_NAME}"
+    WORKTREE_DIR="/workspace/$${BRANCH_NAME}"
 
-    git worktree add -b "${BRANCH_NAME}" "${WORKTREE_DIR}"
-    cd "${WORKTREE_DIR}"
+    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_DIR}"
+    cd "$${WORKTREE_DIR}"
 
     gemini --prompt "You are a senior security reviewer agent. Audit the code within the '${_DIRECTORY}' directory \
       for hardcoded API keys/secrets, Cloud Storage bucket squatting, SQL injection points, and XSS vulnerabilities. \
@@ -160,7 +164,7 @@ steps:
     if ! git diff --quiet; then
       git add .
       git commit -m "security(ai): Automated security fixes from SecurityAgent in ${_DIRECTORY}"
-      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "${BRANCH_NAME}"
+      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "$${BRANCH_NAME}"
     else
       echo "SecurityAgent found no security issues in ${_DIRECTORY}."
     fi
