@@ -1,6 +1,6 @@
-# This Cloud Build file deploys 5 parallel AI agents to work on your codebase.
-# Each agent uses an isolated git worktree and a carefully crafted prompt
-# to securely analyze a specific subdirectory.
+# This Cloud Build file deploys multiple AI agents to work on your codebase sequentially.
+# Each agent checks out a fresh branch to analyze a specific subdirectory
+# and proposes changes in a separate pull request.
 
 steps:
 # --- Step 1: Configure Git for all subsequent steps ---
@@ -29,17 +29,16 @@ steps:
 
     # Agent-specific variables
     AGENT_NAME="BugHunterAgent"
-    BRANCH_NAME="$${AGENT_NAME}-${BUILD_ID}"
-    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    BRANCH_NAME="$${AGENT_NAME}-${SHORT_SHA}"
     SUMMARY_FILE="$${AGENT_NAME}-changes.md"
     COMMIT_MSG="fix(ai): Automated bug fixes from $${AGENT_NAME} in ${_DIRECTORY}"
 
-    # Setup git worktree
-    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
-    cd "$${WORKTREE_PATH}"
+    # Create a fresh branch from the original commit
+    git checkout "$COMMIT_SHA"
+    git checkout -b "$${BRANCH_NAME}"
 
     # Run the AI agent
-    gemini --prompt "You are an autonomous senior engineering agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to find and fix bugs in the '${_DIRECTORY}' subdirectory. \
+    gemini --debug --prompt "You are an autonomous senior engineering agent. Your current working directory is '/workspace'. Your task is to find and fix bugs in the '${_DIRECTORY}' subdirectory. \
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
       You have full autonomy. Formulate a plan and execute it immediately. Do not ask for permission, confirmation, or ask 'Should I proceed?'. \
       First, run the 'ls -R ${_DIRECTORY}' command to discover the files. Then, for each relevant file, analyze it for potential bugs like race conditions or null pointer exceptions. \
@@ -49,7 +48,10 @@ steps:
 
     # Check for changes and create a PR if needed
     if [[ -n "$(git status --porcelain)" ]]; then
-      SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
+      SUMMARY_BODY="Automated changes by $${AGENT_NAME}."
+      if [[ -f "$${SUMMARY_FILE}" ]]; then
+          SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
+      fi
       git add .
       git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
       git commit -m "$${COMMIT_MSG}"
@@ -80,17 +82,16 @@ steps:
 
     # Agent-specific variables
     AGENT_NAME="DocWriterAgent"
-    BRANCH_NAME="$${AGENT_NAME}-${BUILD_ID}"
-    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    BRANCH_NAME="$${AGENT_NAME}-${SHORT_SHA}"
     SUMMARY_FILE="$${AGENT_NAME}-changes.md"
     COMMIT_MSG="docs(ai): Automated documentation updates from $${AGENT_NAME} in ${_DIRECTORY}"
 
-    # Setup git worktree
-    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
-    cd "$${WORKTREE_PATH}"
+    # Create a fresh branch from the original commit
+    git checkout "$COMMIT_SHA"
+    git checkout -b "$${BRANCH_NAME}"
 
     # Run the AI agent
-    gemini --prompt "You are an autonomous senior technical writer agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to improve documentation in the '${_DIRECTORY}' subdirectory. \
+    gemini --debug --prompt "You are an autonomous senior technical writer agent. Your current working directory is '/workspace'. Your task is to improve documentation in the '${_DIRECTORY}' subdirectory. \
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
       You have full autonomy. Formulate a plan and execute it immediately. Do not ask for permission, confirmation, or ask 'Should I proceed?'. \
       First, run 'ls -R ${_DIRECTORY}' to discover the files. Then, find a README.md file. \
@@ -101,7 +102,10 @@ steps:
 
     # Check for changes and create a PR if needed
     if [[ -n "$(git status --porcelain)" ]]; then
-      SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
+      SUMMARY_BODY="Automated changes by $${AGENT_NAME}."
+      if [[ -f "$${SUMMARY_FILE}" ]]; then
+          SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
+      fi
       git add .
       git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
       git commit -m "$${COMMIT_MSG}"
@@ -132,17 +136,16 @@ steps:
 
     # Agent-specific variables
     AGENT_NAME="CodeQualityAgent"
-    BRANCH_NAME="$${AGENT_NAME}-${BUILD_ID}"
-    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    BRANCH_NAME="$${AGENT_NAME}-${SHORT_SHA}"
     SUMMARY_FILE="$${AGENT_NAME}-changes.md"
     COMMIT_MSG="refactor(ai): Apply automated code quality improvements in ${_DIRECTORY}"
 
-    # Setup git worktree
-    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
-    cd "$${WORKTREE_PATH}"
+    # Create a fresh branch from the original commit
+    git checkout "$COMMIT_SHA"
+    git checkout -b "$${BRANCH_NAME}"
 
     # Run the AI agent
-    gemini --prompt "You are an autonomous senior Go engineering agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to improve code quality in the '${_DIRECTORY}' subdirectory. \
+    gemini --debug --prompt "You are an autonomous senior Go engineering agent. Your current working directory is '/workspace'. Your task is to improve code quality in the '${_DIRECTORY}' subdirectory. \
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
       You have full autonomy. Formulate a plan and execute it immediately. Do not ask for permission, confirmation, or ask 'Should I proceed?'. \
       First, run 'ls -R ${_DIRECTORY}' to see the files. Then, apply these improvements to the code: \
@@ -155,7 +158,10 @@ steps:
 
     # Check for changes and create a PR if needed
     if [[ -n "$(git status --porcelain)" ]]; then
-      SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
+      SUMMARY_BODY="Automated changes by $${AGENT_NAME}."
+      if [[ -f "$${SUMMARY_FILE}" ]]; then
+          SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
+      fi
       git add .
       git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
       git commit -m "$${COMMIT_MSG}"
@@ -186,17 +192,16 @@ steps:
 
     # Agent-specific variables
     AGENT_NAME="SecurityAgent"
-    BRANCH_NAME="$${AGENT_NAME}-${BUILD_ID}"
-    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
+    BRANCH_NAME="$${AGENT_NAME}-${SHORT_SHA}"
     SUMMARY_FILE="$${AGENT_NAME}-changes.md"
     COMMIT_MSG="security(ai): Automated security fixes from $${AGENT_NAME} in ${_DIRECTORY}"
 
-    # Setup git worktree
-    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
-    cd "$${WORKTREE_PATH}"
+    # Create a fresh branch from the original commit
+    git checkout "$COMMIT_SHA"
+    git checkout -b "$${BRANCH_NAME}"
 
     # Run the AI agent
-    gemini --prompt "You are an autonomous senior security reviewer agent. Your current working directory is '$${WORKTREE_PATH}'. Your task is to audit code in the '${_DIRECTORY}' subdirectory. \
+    gemini --debug --prompt "You are an autonomous senior security reviewer agent. Your current working directory is '/workspace'. Your task is to audit code in the '${_DIRECTORY}' subdirectory. \
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
       You have full autonomy. Formulate a plan and execute it immediately. Do not ask for permission, confirmation, or ask 'Should I proceed?'. \
       First, run 'ls -R ${_DIRECTORY}' to see the files. Then, find and fix vulnerabilities like hardcoded secrets, SQL injection, or XSS. \
@@ -207,7 +212,10 @@ steps:
 
     # Check for changes and create a PR if needed
     if [[ -n "$(git status --porcelain)" ]]; then
-      SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
+      SUMMARY_BODY="Automated changes by $${AGENT_NAME}."
+      if [[ -f "$${SUMMARY_FILE}" ]]; then
+          SUMMARY_BODY=$(cat "$${SUMMARY_FILE}")
+      fi
       git add .
       git reset HEAD "$${SUMMARY_FILE}" # Unstage the summary file
       git commit -m "$${COMMIT_MSG}"
@@ -242,4 +250,3 @@ substitutions:
   _GITHUB_REPO_OWNER: 'codrienne'
   _GITHUB_REPO_NAME: 'tekton-pipelines'
   _DIRECTORY: 'pkg/apis/pipeline/v1beta1' # The directory for the agents to focus on.
-
