@@ -122,6 +122,37 @@ func TestTaskRun_Invalidate(t *testing.T) {
 			Paths:   []string{"spec.task-words.properties"},
 		},
 		wc: cfgtesting.EnableAlphaAPIFields,
+	}, {
+		name: "propagating object params with nil default and no properties",
+		taskRun: &v1.TaskRun{
+			ObjectMeta: metav1.ObjectMeta{Name: "tr"},
+			Spec: v1.TaskRunSpec{
+				Params: v1.Params{{
+					Name: "task-words",
+					Value: v1.ParamValue{
+						Type:      v1.ParamTypeObject,
+						ObjectVal: map[string]string{"hello": "task run"},
+					},
+				}},
+				TaskSpec: &v1.TaskSpec{
+					Params: []v1.ParamSpec{{
+						Name: "task-words",
+						Type: v1.ParamTypeObject,
+					}},
+					Steps: []v1.Step{{
+						Name:    "echo",
+						Image:   "ubuntu",
+						Command: []string{"echo"},
+						Args:    []string{"$(params.task-words.hello)"},
+					}},
+				},
+			},
+		},
+		want: &apis.FieldError{
+			Message: `missing field(s)`,
+			Paths:   []string{"spec.task-words.properties"},
+		},
+		wc: cfgtesting.EnableAlphaAPIFields,
 	}}
 	for _, ts := range tests {
 		t.Run(ts.name, func(t *testing.T) {
@@ -406,6 +437,36 @@ func TestTaskRun_Validate(t *testing.T) {
 						Default: &v1.ParamValue{
 							Type:      v1.ParamTypeObject,
 							ObjectVal: map[string]string{"hello": "task run def"},
+						},
+					}},
+					Steps: []v1.Step{{
+						Name:    "echo",
+						Image:   "ubuntu",
+						Command: []string{"echo"},
+						Args:    []string{"$(params.task-words.hello)"},
+					}},
+				},
+			},
+		},
+		wc: cfgtesting.EnableAlphaAPIFields,
+	}, {
+		name: "propagating object params with nil default",
+		taskRun: &v1.TaskRun{
+			ObjectMeta: metav1.ObjectMeta{Name: "tr"},
+			Spec: v1.TaskRunSpec{
+				Params: v1.Params{{
+					Name: "task-words",
+					Value: v1.ParamValue{
+						Type:      v1.ParamTypeObject,
+						ObjectVal: map[string]string{"hello": "task run"},
+					},
+				}},
+				TaskSpec: &v1.TaskSpec{
+					Params: []v1.ParamSpec{{
+						Name: "task-words",
+						Type: v1.ParamTypeObject,
+						Properties: map[string]v1.PropertySpec{
+							"hello": {Type: v1.ParamTypeString},
 						},
 					}},
 					Steps: []v1.Step{{

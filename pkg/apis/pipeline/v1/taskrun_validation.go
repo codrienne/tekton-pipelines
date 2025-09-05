@@ -232,6 +232,12 @@ func combineParamSpec(p ParamSpec, paramSpecForValidation map[string]ParamSpec) 
 	if pSpec, ok := paramSpecForValidation[p.Name]; ok {
 		// Merge defaults with provided values in the taskrun.
 		if p.Default != nil && p.Default.ObjectVal != nil {
+			if pSpec.Default == nil {
+				pSpec.Default = &ArrayOrString{
+					Type:      ParamTypeObject,
+					ObjectVal: make(map[string]string),
+				}
+			}
 			for k, v := range p.Default.ObjectVal {
 				if pSpec.Default.ObjectVal == nil {
 					pSpec.Default.ObjectVal = map[string]string{k: v}
