@@ -1,6 +1,6 @@
 # This Cloud Build file deploys 5 parallel AI agents to work on your codebase.
-# Each agent uses an isolated git worktree to check out a new branch,
-# modify code, and push changes without interfering with other agents.
+# Each agent uses an isolated git worktree and a carefully crafted prompt
+# to securely analyze a specific subdirectory.
 
 steps:
 # --- Step 1: Configure Git for all subsequent steps ---
@@ -11,14 +11,13 @@ steps:
   - '-c'
   - |
     set -ex
-    # Configure git for the entire build
     git config --global user.email "cloud-build-bot@google.com"
     git config --global user.name "Cloud Build Bot"
     echo "✅ Git configured globally."
 
 - id: 'BugHunterAgent'
   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-  waitFor: ['ConfigureGit'] # Run agents in parallel after git is configured
+  waitFor: ['ConfigureGit']
   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
   entrypoint: 'bash'
   args:
@@ -26,15 +25,16 @@ steps:
   - |
     set -ex
     BRANCH_NAME="BugHunterAgent-${BUILD_ID}"
+    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
 
-    # Create and move into the isolated worktree directory in one step
-    git worktree add -b "$${BRANCH_NAME}" "/workspace/$${BRANCH_NAME}"
-    cd "/workspace/$${BRANCH_NAME}"
+    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
+    cd "$${WORKTREE_PATH}"
 
-    gemini --prompt "You are a senior engineering agent. Analyze the code within the '${_DIRECTORY}' directory \
-      for potential bugs, including race conditions, null pointer exceptions, and logical flaws. \
-      If you find any, modify the code to fix them directly. Make sure you adjust any unit tests as necessary, \
-      and make sure those tests pass. Please summarize what you did in a file called BugHunterAgent-changes.md" \
+    gemini --prompt "You are a senior engineering agent. Your task is to analyze the code within the '${_DIRECTORY}' directory. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory and MUST NOT use '..' to access parent directories. \
+      Within these constraints, find potential bugs like race conditions or null pointer exceptions. \
+      If you find any, modify the code to fix them directly, updating unit tests as needed. Ensure tests pass. \
+      Summarize your work in a new file named BugHunterAgent-changes.md." \
       --approval-mode=yolo
     
     if ! git diff --quiet; then
@@ -47,7 +47,7 @@ steps:
 
 - id: 'DocWriterAgent'
   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-  waitFor: ['ConfigureGit'] # Run agents in parallel
+  waitFor: ['ConfigureGit']
   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
   entrypoint: 'bash'
   args:
@@ -55,14 +55,15 @@ steps:
   - |
     set -ex
     BRANCH_NAME="DocWriterAgent-${BUILD_ID}"
+    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
 
-    git worktree add -b "$${BRANCH_NAME}" "/workspace/$${BRANCH_NAME}"
-    cd "/workspace/$${BRANCH_NAME}"
+    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
+    cd "$${WORKTREE_PATH}"
 
-    gemini --prompt "You are a senior technical writer agent. Scan the '${_DIRECTORY}' directory for a README.md file. \
-      Update it to fully reflect the code in that specific directory. Ensure it explains the code's purpose, \
-      lists public functions or API endpoints, and provides clear usage examples. \
-      If a README.md is missing in '${_DIRECTORY}', create one there." \
+    gemini --prompt "You are a senior technical writer agent. Your task is to scan the '${_DIRECTORY}' directory for a README.md file. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory and MUST NOT use '..' to access parent directories. \
+      Within these constraints, update the README to reflect the code in that directory, explaining its purpose and showing usage examples. \
+      If the README is missing, create it." \
       --approval-mode=yolo
     
     if ! git diff --quiet; then
@@ -74,8 +75,8 @@ steps:
     fi
 
 - id: 'TestWriterAgent'
-  name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-  waitFor: ['ConfigureGit'] # Run agents in parallel
+  name: 'gcr.io/project/gemini-cli-node20:latest'
+  waitFor: ['ConfigureGit']
   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
   entrypoint: 'bash'
   args:
@@ -83,17 +84,17 @@ steps:
   - |
     set -ex
     BRANCH_NAME="TestWriterAgent-${BUILD_ID}"
+    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
 
-    git worktree add -b "$${BRANCH_NAME}" "/workspace/$${BRANCH_NAME}"
-    cd "/workspace/$${BRANCH_NAME}"
+    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
+    cd "$${WORKTREE_PATH}"
 
-    gemini --prompt "You are a senior software engineer in test. Your goal is to increase test coverage for the code \
-      in the '${_DIRECTORY}' directory. Identify critical code paths missing unit tests within that directory, \
-      write the necessary test files, and add them. After writing the tests, run them to ensure they pass \
-      and correctly validate behavior. Only keep tests that pass. Summarize the changes in TestWriterAgent-changes.md" \
+    gemini --prompt "You are a senior software engineer in test. Your goal is to increase test coverage for code in the '${_DIRECTORY}' directory. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory and MUST NOT use '..' to access parent directories. \
+      Within these constraints, identify missing unit tests, write them, and ensure they pass. Only keep tests that pass. \
+      Summarize your work in a new file named TestWriterAgent-changes.md." \
       --approval-mode=yolo
     
-    # Use a single '$' for the Cloud Build substitution variable _DIRECTORY
     go test ./$_DIRECTORY/...
     
     if ! git diff --quiet; then
@@ -106,7 +107,7 @@ steps:
 
 - id: 'CodeQualityAgent'
   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-  waitFor: ['ConfigureGit'] # Run agents in parallel
+  waitFor: ['ConfigureGit']
   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
   entrypoint: 'bash'
   args:
@@ -114,16 +115,18 @@ steps:
   - |
     set -ex
     BRANCH_NAME="CodeQualityAgent-${BUILD_ID}"
+    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
 
-    git worktree add -b "$${BRANCH_NAME}" "/workspace/$${BRANCH_NAME}"
-    cd "/workspace/$${BRANCH_NAME}"
+    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
+    cd "$${WORKTREE_PATH}"
 
-    gemini --prompt "You are a senior engineering agent specializing in Go code quality. Your task is to analyze the \
-      code within the '${_DIRECTORY}' directory and apply three types of improvements: \
-      1. **Refactor:** Identify and refactor long methods, complex logic, or tightly coupled components to improve code elegance and maintainability without changing external behavior. \
-      2. **Style:** Enforce the best practices from the Google Go Style Guide (https://google.github.io/styleguide/go/best-practices.html). Correct any deviations in formatting, naming, error handling, and other style rules. \
-      3. **Modernize:** Scan dependencies (e.g., go.mod) and source code for usage of deprecated packages or API calls. Replace them with modern alternatives, ensuring the code remains functional. \
-      4. Summarize the changes in CodeQualityAgent-changes.md" \
+    gemini --prompt "You are a senior Go engineering agent. Analyze the code in the '${_DIRECTORY}' directory. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory and MUST NOT use '..' to access parent directories. \
+      Within these constraints, apply these improvements: \
+      1. **Refactor:** Improve code elegance and maintainability. \
+      2. **Style:** Enforce the Google Go Style Guide. \
+      3. **Modernize:** Update any deprecated packages or APIs, checking go.mod. \
+      Summarize your work in a new file named CodeQualityAgent-changes.md." \
       --approval-mode=yolo
     
     if ! git diff --quiet; then
@@ -136,7 +139,7 @@ steps:
 
 - id: 'SecurityAgent'
   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-  waitFor: ['ConfigureGit'] # Run agents in parallel
+  waitFor: ['ConfigureGit']
   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
   entrypoint: 'bash'
   args:
@@ -144,14 +147,16 @@ steps:
   - |
     set -ex
     BRANCH_NAME="SecurityAgent-${BUILD_ID}"
+    WORKTREE_PATH="/workspace/$${BRANCH_NAME}"
 
-    git worktree add -b "$${BRANCH_NAME}" "/workspace/$${BRANCH_NAME}"
-    cd "/workspace/$${BRANCH_NAME}"
+    git worktree add -b "$${BRANCH_NAME}" "$${WORKTREE_PATH}"
+    cd "$${WORKTREE_PATH}"
 
-    gemini --prompt "You are a senior security reviewer agent. Audit the code within the '${_DIRECTORY}' directory \
-      for hardcoded API keys/secrets, Cloud Storage bucket squatting, SQL injection points, and XSS vulnerabilities. \
-      If you find hardcoded credentials, replace them with a placeholder like 'REPLACE_WITH_SECRET_MANAGER_KEY' \
-      and add a TODO. Patch other vulnerabilities directly. Summarize the changes in SecurityAgent-changes.md" \
+    gemini --prompt "You are a senior security reviewer agent. Audit the code in the '${_DIRECTORY}' directory. \
+      IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to the current directory and MUST NOT use '..' to access parent directories. \
+      Within these constraints, find and fix vulnerabilities like hardcoded secrets, SQL injection, or XSS. \
+      Replace hardcoded credentials with a 'REPLACE_WITH_SECRET_MANAGER_KEY' placeholder. \
+      Summarize your work in a new file named SecurityAgent-changes.md." \
       --approval-mode=yolo
     
     if ! git diff --quiet; then
