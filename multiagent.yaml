@@ -44,8 +44,7 @@ steps:
       IMPORTANT: You are in a sandboxed environment. All file paths you access must be relative to your current directory and MUST NOT use '..' to access parent directories. \
       You have full autonomy. Formulate a plan and execute it immediately. Do not ask for permission, confirmation, or ask 'Should I proceed?'. \
       First, run the 'ls -R ${_DIRECTORY}' command to discover the files. Then, for each relevant file, analyze it for potential bugs like race conditions or null pointer exceptions. \
-      If you find any, modify the code to fix them directly, updating unit tests as needed. Ensure tests pass. \
-      Finally, summarize your work in a new file named $${SUMMARY_FILE}." \
+      If you find and fix any bugs, you must summarize your work in a new file named $${SUMMARY_FILE}}. If you make no changes, do not create this file." \
       --model=${_MODEL} \
       --approval-mode=yolo
 
@@ -98,7 +97,7 @@ steps:
       You have full autonomy. Formulate a plan and execute it immediately. Do not ask for permission, confirmation, or ask 'Should I proceed?'. \
       First, run 'ls -R ${_DIRECTORY}' to discover the files. Then, find a README.md file. \
       If the README exists, update it to reflect the code in the directory, explaining its purpose and showing usage examples. If it is missing, create it. \
-      Finally, summarize your work in a new file named $${SUMMARY_FILE}." \
+      If and only if you create or modify documentation, you must summarize your work in a new file named $${SUMMARY_FILE}}. If you make no changes, do not create this file." \
       --model=${_MODEL} \
       --approval-mode=yolo
 
@@ -153,7 +152,7 @@ steps:
       1. **Refactor:** Improve code elegance and maintainability. \
       2. **Style:** Enforce the Google Go Style Guide. \
       3. **Modernize:** Update any deprecated packages or APIs, checking go.mod. \
-      Finally, summarize your work in a new file named $${SUMMARY_FILE}." \
+      If and only if you apply improvements to the code, you must summarize your work in a new file named $${SUMMARY_FILE}}. If you make no changes, do not create this file." \
       --model=${_MODEL} \
       --approval-mode=yolo
 
@@ -206,7 +205,7 @@ steps:
       You have full autonomy. Formulate a plan and execute it immediately. Do not ask for permission, confirmation, or ask 'Should I proceed?'. \
       First, run 'ls -R ${_DIRECTORY}' to see the files. Then, find and fix vulnerabilities like hardcoded secrets, SQL injection, or XSS. \
       Replace hardcoded credentials with a 'REPLACE_WITH_SECRET_MANAGER_KEY' placeholder. \
-      Finally, summarize your work in a new file named $${SUMMARY_FILE}." \
+      If and only if you find and fix vulnerabilities, you must summarize your work in a new file named $${SUMMARY_FILE}}. If you make no changes, do not create this file." \
       --model=${_MODEL} \
       --approval-mode=yolo
 
@@ -306,3 +305,4 @@ substitutions:
 #     else
 #       echo "$${AGENT_NAME} did not add any new tests in ${_DIRECTORY}."
 #     fi
+
