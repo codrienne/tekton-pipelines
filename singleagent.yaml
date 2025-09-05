@@ -19,10 +19,14 @@ steps:
       git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "BugHunterAgent-${BUILD_ID}"
     else
       echo "BugHunterAgent found no issues to fix in ${_DIRECTORY}."
-    fi
- 
+    fi 
 
 # --- Configuration ---
+
+# Use more CPU to make it faster
+options:
+ machineType: 'E2_HIGHCPU_32'
+
 
 # Secrets to make available as environment variables for all steps.
 availableSecrets:
