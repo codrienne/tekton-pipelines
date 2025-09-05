@@ -2,6 +2,7 @@
 # Each agent checks out a new branch, runs Gemini to modify the code for a specific purpose,
 # commits the changes, and pushes the new branch to your GitHub repository.
 
+steps:
 # --- Step 1: Configure Git for all subsequent steps ---
 - id: 'ConfigureGit'
   name: 'gcr.io/cloud-builders/git'
@@ -14,9 +15,7 @@
     git config --global user.email "cloud-build-bot@google.com"
     git config --global user.name "Cloud Build Bot"
     echo "✅ Git configured globally."
-
-
-steps:
+    
 - id: 'BugHunterAgent'
   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
   waitFor: ['ConfigureGit'] # Run in parallel
