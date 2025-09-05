@@ -107,42 +107,43 @@ func (pr *PipelineRun) PipelineTimeout(ctx context.Context) time.Duration {
 	return time.Duration(config.FromContextOrDefaults(ctx).Defaults.DefaultTimeoutMinutes) * time.Minute
 }
 
-// TasksTimeout returns the tasks timeout for the PipelineRun, if set,
-// or the tasks timeout computed from the Pipeline and Finally timeouts, if those are set.
+// TasksTimeout returns the tasks timeout for the PipelineRun.
 func (pr *PipelineRun) TasksTimeout() *metav1.Duration {
-	t := pr.Spec.Timeouts
-	if t == nil {
-		return nil
-	}
-	if t.Tasks != nil {
-		return t.Tasks
-	}
-	if t.Pipeline != nil && t.Finally != nil {
-		if t.Pipeline.Duration == config.NoTimeoutDuration || t.Finally.Duration == config.NoTimeoutDuration {
-			return nil
+	return pr.getTimeout(func(t *TimeoutFields) *metav1.Duration {
+		if t.Tasks != nil {
+			return t.Tasks
 		}
-		return &metav1.Duration{Duration: (t.Pipeline.Duration - t.Finally.Duration)}
-	}
-	return nil
+		if t.Pipeline != nil && t.Finally != nil {
+			if t.Pipeline.Duration == config.NoTimeoutDuration || t.Finally.Duration == config.NoTimeoutDuration {
+				return nil
+			}
+			return &metav1.Duration{Duration: t.Pipeline.Duration - t.Finally.Duration}
+		}
+		return nil
+	})
 }
 
-// FinallyTimeout returns the finally timeout for the PipelineRun, if set,
-// or the finally timeout computed from the Pipeline and Tasks timeouts, if those are set.
+// FinallyTimeout returns the finally timeout for the PipelineRun.
 func (pr *PipelineRun) FinallyTimeout() *metav1.Duration {
-	t := pr.Spec.Timeouts
-	if t == nil {
+	return pr.getTimeout(func(t *TimeoutFields) *metav1.Duration {
+		if t.Finally != nil {
+			return t.Finally
+		}
+		if t.Pipeline != nil && t.Tasks != nil {
+			if t.Pipeline.Duration == config.NoTimeoutDuration || t.Tasks.Duration == config.NoTimeoutDuration {
+				return nil
+			}
+			return &metav1.Duration{Duration: t.Pipeline.Duration - t.Tasks.Duration}
+		}
+		return nil
+	})
+}
+
+func (pr *PipelineRun) getTimeout(get func(t *TimeoutFields) *metav1.Duration) *metav1.Duration {
+	if pr.Spec.Timeouts == nil {
 		return nil
 	}
-	if t.Finally != nil {
-		return t.Finally
-	}
-	if t.Pipeline != nil && t.Tasks != nil {
-		if t.Pipeline.Duration == config.NoTimeoutDuration || t.Tasks.Duration == config.NoTimeoutDuration {
-			return nil
-		}
-		return &metav1.Duration{Duration: (t.Pipeline.Duration - t.Tasks.Duration)}
-	}
-	return nil
+	return get(pr.Spec.Timeouts)
 }
 
 // IsPending returns true if the PipelineRun's spec status is set to Pending state

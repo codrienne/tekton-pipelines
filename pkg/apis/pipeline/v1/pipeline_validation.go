@@ -418,22 +418,22 @@ func validatePipelineTaskParameterUsage(tasks []PipelineTask, params ParamSpecs)
 }
 
 // validatePipelineWorkspacesUsage validates that workspaces referenced in the Pipeline are declared by the Pipeline
-func (ps *PipelineSpec) validatePipelineWorkspacesUsage() (errs *apis.FieldError) {
-	errs = errs.Also(validatePipelineTasksWorkspacesUsage(ps.Workspaces, ps.Tasks).ViaField("tasks"))
-	errs = errs.Also(validatePipelineTasksWorkspacesUsage(ps.Workspaces, ps.Finally).ViaField("finally"))
-	return errs
+func (ps *PipelineSpec) validatePipelineWorkspacesUsage() *apis.FieldError {
+	return validateTasks(ps, (*PipelineTask).validateWorkspaces, "workspaces")
 }
 
-// validatePipelineTasksWorkspacesUsage validates that all the referenced workspaces (by pipeline tasks) are specified in
-// the pipeline
-func validatePipelineTasksWorkspacesUsage(wss []PipelineWorkspaceDeclaration, pts []PipelineTask) (errs *apis.FieldError) {
+func validateTasks(ps *PipelineSpec, validate func(pt *PipelineTask, workspaceNames sets.String) *apis.FieldError, field string) *apis.FieldError {
+	var errs *apis.FieldError
 	workspaceNames := sets.NewString()
-	for _, ws := range wss {
+	for _, ws := range ps.Workspaces {
 		workspaceNames.Insert(ws.Name)
 	}
-	// Any workspaces used in PipelineTasks should have their name declared in the Pipeline's Workspaces list.
-	for i, pt := range pts {
-		errs = errs.Also(pt.validateWorkspaces(workspaceNames).ViaIndex(i))
+
+	for i, pt := range ps.Tasks {
+		errs = errs.Also(validate(&pt, workspaceNames).ViaIndex(i).ViaField("tasks"))
+	}
+	for i, pt := range ps.Finally {
+		errs = errs.Also(validate(&pt, workspaceNames).ViaIndex(i).ViaField("finally"))
 	}
 	return errs
 }
