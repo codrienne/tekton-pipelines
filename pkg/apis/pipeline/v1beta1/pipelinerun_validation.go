@@ -422,24 +422,28 @@ func validateTaskRunSpecTimeout(ctx context.Context, timeout *metav1.Duration, p
 		var maxTimeout *metav1.Duration
 		var timeoutSource string
 
-		switch {
-		case pipelineTimeouts != nil && pipelineTimeouts.Tasks != nil:
-			if validatedTimeout, err := validateTimeout(pipelineTimeouts.Tasks, cfg.Defaults.DefaultTimeoutMinutes); err != nil {
-				// Add error if Tasks timeout is invalid (prevents silent failures)
-				errs = errs.Also(err)
-			} else {
-				maxTimeout = validatedTimeout
-				timeoutSource = "pipeline tasks duration"
+		if pipelineTimeouts != nil {
+			switch {
+			case pipelineTimeouts.Tasks != nil:
+				if validatedTimeout, err := validateTimeout(pipelineTimeouts.Tasks, cfg.Defaults.DefaultTimeoutMinutes); err != nil {
+					// Add error if Tasks timeout is invalid (prevents silent failures)
+					errs = errs.Also(err)
+				} else {
+					maxTimeout = validatedTimeout
+					timeoutSource = "pipeline tasks duration"
+				}
+			case pipelineTimeouts.Pipeline != nil:
+				if validatedTimeout, err := validateTimeout(pipelineTimeouts.Pipeline, cfg.Defaults.DefaultTimeoutMinutes); err != nil {
+					// Add error if Pipeline timeout is invalid (prevents silent failures)
+					errs = errs.Also(err)
+				} else {
+					maxTimeout = validatedTimeout
+					timeoutSource = "pipeline duration"
+				}
 			}
-		case pipelineTimeouts != nil && pipelineTimeouts.Pipeline != nil:
-			if validatedTimeout, err := validateTimeout(pipelineTimeouts.Pipeline, cfg.Defaults.DefaultTimeoutMinutes); err != nil {
-				// Add error if Pipeline timeout is invalid (prevents silent failures)
-				errs = errs.Also(err)
-			} else {
-				maxTimeout = validatedTimeout
-				timeoutSource = "pipeline duration"
-			}
-		default:
+		}
+
+		if maxTimeout == nil {
 			maxTimeout = &metav1.Duration{Duration: time.Duration(cfg.Defaults.DefaultTimeoutMinutes) * time.Minute}
 			timeoutSource = "default pipeline duration"
 		}
@@ -468,4 +472,9 @@ func validateTimeout(timeout *metav1.Duration, defaultTimeoutMinutes int) (*meta
 		return nil, apis.ErrInvalidValue(timeout.Duration.String()+" should be >= 0", "timeout")
 	}
 	return timeout, nil
+}
+
+// This function is exported for testing purposes.
+func ValidateTaskRunSpecTimeout(ctx context.Context, timeout *metav1.Duration, pipelineTimeouts *TimeoutFields) *apis.FieldError {
+	return validateTaskRunSpecTimeout(ctx, timeout, pipelineTimeouts)
 }

@@ -1997,32 +1997,57 @@ func TestPipelineRunSpec_ValidateUpdate_FinalizerChanges(t *testing.T) {
 					},
 				},
 			},
-			expectedError: "invalid value: Once the PipelineRun is complete, no updates are allowed",
+			expectedError: "invalid value: Once the PipelineRun is complete, no updates are allowed: ",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := config.ToContext(t.Context(), &config.Config{
-				Defaults: &config.Defaults{
-					DefaultResolverType:   "bundles",
-					DefaultTimeoutMinutes: 60,
-				},
-			})
-			ctx = apis.WithinUpdate(ctx, tt.baselinePipelineRun)
-
+			ctx := apis.WithinUpdate(context.Background(), tt.baselinePipelineRun)
 			err := tt.pipelineRun.Spec.ValidateUpdate(ctx)
+			if d := cmp.Diff(tt.expectedError, err.Error()); d != "" {
+				t.Errorf("PipelineRunSpec.ValidateUpdate() errors diff %s", diff.PrintWantGot(d))
+			}
+		})
+	}
+}
 
-			if tt.expectedError == "" {
-				if err != nil {
-					t.Errorf("Expected no error, but got: %v", err)
-				}
-			} else {
-				if err == nil {
-					t.Errorf("Expected error containing %q, but got none", tt.expectedError)
-				} else if !strings.Contains(err.Error(), tt.expectedError) {
-					t.Errorf("Expected error containing %q, but got: %v", tt.expectedError, err)
-				}
+func TestValidateTaskRunSpecTimeout(t *testing.T) {
+	tests := []struct {
+		name             string
+		timeout          *metav1.Duration
+		pipelineTimeouts *v1beta1.TimeoutFields
+		expectedError    *apis.FieldError
+	}{
+		{
+			name:             "nil timeout, nil pipelineTimeouts",
+			timeout:          nil,
+			pipelineTimeouts: nil,
+			expectedError:    nil,
+		},
+		{
+			name:    "valid timeout, nil pipelineTimeouts",
+			timeout: &metav1.Duration{Duration: 10 * time.Minute},
+			pipelineTimeouts: &v1beta1.TimeoutFields{
+				Pipeline: &metav1.Duration{Duration: 20 * time.Minute},
+			},
+			expectedError: nil,
+		},
+		{
+			name:             "valid timeout, nil pipelineTimeouts, should not panic",
+			timeout:          &metav1.Duration{Duration: 10 * time.Minute},
+			pipelineTimeouts: nil,
+			expectedError:    nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// This is the function we're testing, but it's not exported.
+			// We're calling it through a helper function that is exported.
+			err := v1beta1.ValidateTaskRunSpecTimeout(context.Background(), tt.timeout, tt.pipelineTimeouts)
+			if d := cmp.Diff(tt.expectedError.Error(), err.Error()); d != "" {
+				t.Errorf("ValidateTaskRunSpecTimeout() errors diff %s", diff.PrintWantGot(d))
 			}
 		})
 	}
