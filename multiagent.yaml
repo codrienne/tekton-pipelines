@@ -25,49 +25,49 @@ steps:
       echo "BugHunterAgent found no issues to fix in ${_DIRECTORY}."
     fi
 
-- id: 'DocWriterAgent'
-  name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-  waitFor: ['-'] # Run in parallel
-  secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
-  entrypoint: 'bash'
-  args:
-  - '-c'
-  - |
-    set -ex
-    git config --global user.email "cloud-build-bot@google.com"
-    git config --global user.name "Cloud Build Bot (Doc Writer)"
-    git checkout -b "DocWriterAgent-${BUILD_ID}"
-    gemini --prompt "You are a senior technical writer agent. Scan the '${_DIRECTORY}' directory for a README.md file. Update it to fully reflect the code in that specific directory. Ensure it explains the code's purpose, lists public functions or API endpoints, and provides clear usage examples. If a README.md is missing in '${_DIRECTORY}', create one there." --approval-mode=yolo
-    if ! git diff --quiet; then
-      git add .
-      git commit -m "docs(ai): Automated documentation updates from DocWriterAgent in ${_DIRECTORY}"
-      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "DocWriterAgent-${BUILD_ID}"
-    else
-      echo "DocWriterAgent found no documentation to update in ${_DIRECTORY}."
-    fi
+# - id: 'DocWriterAgent'
+#   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
+#   waitFor: ['-'] # Run in parallel
+#   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
+#   entrypoint: 'bash'
+#   args:
+#   - '-c'
+#   - |
+#     set -ex
+#     git config --global user.email "cloud-build-bot@google.com"
+#     git config --global user.name "Cloud Build Bot (Doc Writer)"
+#     git checkout -b "DocWriterAgent-${BUILD_ID}"
+#     gemini --prompt "You are a senior technical writer agent. Scan the '${_DIRECTORY}' directory for a README.md file. Update it to fully reflect the code in that specific directory. Ensure it explains the code's purpose, lists public functions or API endpoints, and provides clear usage examples. If a README.md is missing in '${_DIRECTORY}', create one there." --approval-mode=yolo
+#     if ! git diff --quiet; then
+#       git add .
+#       git commit -m "docs(ai): Automated documentation updates from DocWriterAgent in ${_DIRECTORY}"
+#       git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "DocWriterAgent-${BUILD_ID}"
+#     else
+#       echo "DocWriterAgent found no documentation to update in ${_DIRECTORY}."
+#     fi
 
-- id: 'TestWriterAgent'
-  name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
-  waitFor: ['-'] # Run in parallel
-  secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
-  entrypoint: 'bash'
-  args:
-  - '-c'
-  - |
-    set -ex
-    git config --global user.email "cloud-build-bot@google.com"
-    git config --global user.name "Cloud Build Bot (Test Writer)"
-    git checkout -b "TestWriterAgent-${BUILD_ID}"
-    gemini --prompt "You are a senior software engineer in test. Your goal is to increase test coverage for the code in the '${_DIRECTORY}' directory. Identify critical code paths missing unit tests within that directory, write the necessary test files, and add them. After writing the tests, run them to ensure they pass and correctly validate behavior. Only keep tests that pass. Summarize the changes in TestWriterAgent-changes.md" --approval-mode=yolo
-    # Run tests only in the specified directory
-    go test ./$${_DIRECTORY}/...
-    if ! git diff --quiet; then
-      git add .
-      git commit -m "test(ai): Add new unit tests from TestWriterAgent for ${_DIRECTORY}"
-      git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "TestWriterAgent-${BUILD_ID}"
-    else
-      echo "TestWriterAgent did not add any new tests in ${_DIRECTORY}."
-    fi
+# - id: 'TestWriterAgent'
+#   name: 'gcr.io/$PROJECT_ID/gemini-cli-node20:latest'
+#   waitFor: ['-'] # Run in parallel
+#   secretEnv: ['GEMINI_API_KEY', 'GITHUB_PAT']
+#   entrypoint: 'bash'
+#   args:
+#   - '-c'
+#   - |
+#     set -ex
+#     git config --global user.email "cloud-build-bot@google.com"
+#     git config --global user.name "Cloud Build Bot (Test Writer)"
+#     git checkout -b "TestWriterAgent-${BUILD_ID}"
+#     gemini --prompt "You are a senior software engineer in test. Your goal is to increase test coverage for the code in the '${_DIRECTORY}' directory. Identify critical code paths missing unit tests within that directory, write the necessary test files, and add them. After writing the tests, run them to ensure they pass and correctly validate behavior. Only keep tests that pass. Summarize the changes in TestWriterAgent-changes.md" --approval-mode=yolo
+#     # Run tests only in the specified directory
+#     go test ./$${_DIRECTORY}/...
+#     if ! git diff --quiet; then
+#       git add .
+#       git commit -m "test(ai): Add new unit tests from TestWriterAgent for ${_DIRECTORY}"
+#       git push https://$$GITHUB_PAT@github.com/${_GITHUB_REPO_OWNER}/${_GITHUB_REPO_NAME}.git "TestWriterAgent-${BUILD_ID}"
+#     else
+#       echo "TestWriterAgent did not add any new tests in ${_DIRECTORY}."
+#     fi
 
 # --- Combined Code Quality Agent ---
 - id: 'CodeQualityAgent'
