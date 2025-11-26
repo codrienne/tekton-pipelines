@@ -858,9 +858,10 @@ func validateMatrixEmittingStringResults(resultRefs []*ResultRef, taskMapping ma
 		resultName := resultRef.Result
 		if task.TaskRef != nil {
 			referencedTaskName := task.TaskRef.Name
-			referencedTask := taskMapping[referencedTaskName]
-			if referencedTask.TaskSpec != nil {
-				errs = errs.Also(validateStringResults(referencedTask.TaskSpec.Results, resultName))
+			if referencedTask, ok := taskMapping[referencedTaskName]; ok {
+				if referencedTask.TaskSpec != nil {
+					errs = errs.Also(validateStringResults(referencedTask.TaskSpec.Results, resultName))
+				}
 			}
 		} else if task.TaskSpec != nil {
 			errs = errs.Also(validateStringResults(task.TaskSpec.Results, resultName))
