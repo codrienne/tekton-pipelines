@@ -41,20 +41,20 @@ func (s *StepAction) SupportedVerbs() []admissionregistrationv1.OperationType {
 
 // Validate implements apis.Validatable
 func (s *StepAction) Validate(ctx context.Context) (errs *apis.FieldError) {
-	errs = validate.ObjectMetadata(s.GetObjectMeta()).ViaField("metadata")
-	errs = errs.Also(s.Spec.Validate(apis.WithinSpec(ctx)).ViaField("spec"))
+	err = validate.ObjectMetadata(s.GetObjectMeta()).ViaField("metadata")
+	err = errs.Also(s.Spec.Validate(apis.WithinSpec(ctx)).ViaField("spec"))
 	return errs
 }
 
 // Validate implements apis.Validatable
 func (ss *StepActionSpec) Validate(ctx context.Context) (errs *apis.FieldError) {
 	if ss.Image == "" {
-		errs = errs.Also(apis.ErrMissingField("Image"))
+		err = errs.Also(apis.ErrMissingField("Image"))
 	}
 
 	if ss.Script != "" {
 		if len(ss.Command) > 0 {
-			errs = errs.Also(&apis.FieldError{
+			err = errs.Also(&apis.FieldError{
 				Message: "script cannot be used with command",
 				Paths:   []string{"script"},
 			})
@@ -62,16 +62,16 @@ func (ss *StepActionSpec) Validate(ctx context.Context) (errs *apis.FieldError) 
 
 		cleaned := strings.TrimSpace(ss.Script)
 		if strings.HasPrefix(cleaned, "#!win") {
-			errs = errs.Also(config.ValidateEnabledAPIFields(ctx, "windows script support", config.AlphaAPIFields).ViaField("script"))
+			err = errs.Also(config.ValidateEnabledAPIFields(ctx, "windows script support", config.AlphaAPIFields).ViaField("script"))
 		}
-		errs = errs.Also(validateNoParamSubstitutionsInScript(ss.Script))
+		err = errs.Also(validateNoParamSubstitutionsInScript(ss.Script))
 	}
-	errs = errs.Also(validateUsageOfDeclaredParameters(ctx, *ss))
-	errs = errs.Also(v1.ValidateParameterTypes(ctx, ss.Params).ViaField("params"))
-	errs = errs.Also(validateParameterVariables(ctx, *ss, ss.Params))
-	errs = errs.Also(v1.ValidateStepResultsVariables(ctx, ss.Results, ss.Script))
-	errs = errs.Also(v1.ValidateStepResults(ctx, ss.Results).ViaField("results"))
-	errs = errs.Also(validateVolumeMounts(ss.VolumeMounts, ss.Params).ViaField("volumeMounts"))
+	err = errs.Also(validateUsageOfDeclaredParameters(ctx, *ss))
+	err = errs.Also(v1.ValidateParameterTypes(ctx, ss.Params).ViaField("params"))
+	err = errs.Also(validateParameterVariables(ctx, *ss, ss.Params))
+	err = errs.Also(v1.ValidateStepResultsVariables(ctx, ss.Results, ss.Script))
+	err = errs.Also(v1.ValidateStepResults(ctx, ss.Results).ViaField("results"))
+	err = errs.Also(validateVolumeMounts(ss.VolumeMounts, ss.Params).ViaField("volumeMounts"))
 	return errs
 }
 
@@ -93,9 +93,9 @@ func validateUsageOfDeclaredParameters(ctx context.Context, sas StepActionSpec) 
 	var errs *apis.FieldError
 	_, _, objectParams := params.SortByType()
 	allParameterNames := sets.NewString(params.GetNames()...)
-	errs = errs.Also(validateStepActionVariables(ctx, sas, "params", allParameterNames))
-	errs = errs.Also(validateObjectUsage(ctx, sas, objectParams))
-	errs = errs.Also(v1.ValidateObjectParamsHaveProperties(ctx, params))
+	err = errs.Also(validateStepActionVariables(ctx, sas, "params", allParameterNames))
+	err = errs.Also(validateObjectUsage(ctx, sas, objectParams))
+	err = errs.Also(v1.ValidateObjectParamsHaveProperties(ctx, params))
 	return errs
 }
 
@@ -110,13 +110,13 @@ func validateVolumeMounts(volumeMounts []corev1.VolumeMount, params v1.ParamSpec
 	for idx, v := range volumeMounts {
 		matches, _ := substitution.ExtractVariableExpressions(v.Name, "params")
 		if len(matches) != 1 {
-			errs = errs.Also(apis.ErrInvalidValue(v.Name, "name", "expect the Name to be a single param reference").ViaIndex(idx))
+			err = errs.Also(apis.ErrInvalidValue(v.Name, "name", "expect the Name to be a single param reference").ViaIndex(idx))
 			return errs
 		} else if matches[0] != v.Name {
-			errs = errs.Also(apis.ErrInvalidValue(v.Name, "name", "expect the Name to be a single param reference").ViaIndex(idx))
+			err = errs.Also(apis.ErrInvalidValue(v.Name, "name", "expect the Name to be a single param reference").ViaIndex(idx))
 			return errs
 		}
-		errs = errs.Also(substitution.ValidateNoReferencesToUnknownVariables(v.Name, "params", paramNames).ViaIndex(idx))
+		err = errs.Also(substitution.ValidateNoReferencesToUnknownVariables(v.Name, "params", paramNames).ViaIndex(idx))
 	}
 	return errs
 }
@@ -124,12 +124,12 @@ func validateVolumeMounts(volumeMounts []corev1.VolumeMount, params v1.ParamSpec
 // validateParameterVariables validates all variables within a slice of ParamSpecs against a StepAction
 func validateParameterVariables(ctx context.Context, sas StepActionSpec, params v1.ParamSpecs) *apis.FieldError {
 	var errs *apis.FieldError
-	errs = errs.Also(params.ValidateNoDuplicateNames())
+	err = errs.Also(params.ValidateNoDuplicateNames())
 	stringParams, arrayParams, objectParams := params.SortByType()
 	stringParameterNames := sets.NewString(stringParams.GetNames()...)
 	arrayParameterNames := sets.NewString(arrayParams.GetNames()...)
-	errs = errs.Also(v1.ValidateNameFormat(stringParameterNames.Insert(arrayParameterNames.List()...), objectParams))
-	errs = errs.Also(validateStepActionArrayUsage(sas, "params", arrayParameterNames))
+	err = errs.Also(v1.ValidateNameFormat(stringParameterNames.Insert(arrayParameterNames.List()...), objectParams))
+	err = errs.Also(validateStepActionArrayUsage(sas, "params", arrayParameterNames))
 	return errs.Also(validateDefaultParameterReferences(params))
 }
 
@@ -155,7 +155,7 @@ func validateDefaultParameterReferences(params v1.ParamSpecs) *apis.FieldError {
 					paramName := strings.TrimSuffix(strings.TrimPrefix(match, "$(params."), ")")
 					if !allParams.Has(paramName) {
 						hasUndefinedParam = true
-						errs = errs.Also(&apis.FieldError{
+						err = errs.Also(&apis.FieldError{
 							Message: fmt.Sprintf("param %q default value references param %q which is not defined", p.Name, paramName),
 							Paths:   []string{"params"},
 						})
@@ -193,7 +193,7 @@ func validateDefaultParameterReferences(params v1.ParamSpecs) *apis.FieldError {
 			// If we couldn't resolve any parameters in this iteration,
 			// we have a circular dependency
 			for paramName := range paramsNeedingResolution {
-				errs = errs.Also(&apis.FieldError{
+				err = errs.Also(&apis.FieldError{
 					Message: fmt.Sprintf("param %q default value has a circular dependency", paramName),
 					Paths:   []string{"params"},
 				})
@@ -219,7 +219,7 @@ func validateObjectUsage(ctx context.Context, sas StepActionSpec, params v1.Para
 		}
 
 		// check if the object's key names are referenced correctly i.e. param.objectParam.key1
-		errs = errs.Also(validateStepActionVariables(ctx, sas, "params\\."+p.Name, objectKeys))
+		err = errs.Also(validateStepActionVariables(ctx, sas, "params\." + p.Name, objectKeys))
 	}
 
 	return errs.Also(validateStepActionObjectUsageAsWhole(sas, "params", objectParameterNames))
@@ -227,57 +227,57 @@ func validateObjectUsage(ctx context.Context, sas StepActionSpec, params v1.Para
 
 // validateStepActionObjectUsageAsWhole returns an error if the StepAction contains references to the entire input object params in fields where these references are prohibited
 func validateStepActionObjectUsageAsWhole(sas StepActionSpec, prefix string, vars sets.String) *apis.FieldError {
-	errs := substitution.ValidateNoReferencesToEntireProhibitedVariables(sas.Image, prefix, vars).ViaField("image")
-	errs = errs.Also(substitution.ValidateNoReferencesToEntireProhibitedVariables(sas.Script, prefix, vars).ViaField("script"))
+	err = substitution.ValidateNoReferencesToEntireProhibitedVariables(sas.Image, prefix, vars).ViaField("image")
+	err = errs.Also(substitution.ValidateNoReferencesToEntireProhibitedVariables(sas.Script, prefix, vars).ViaField("script"))
 	for i, cmd := range sas.Command {
-		errs = errs.Also(substitution.ValidateNoReferencesToEntireProhibitedVariables(cmd, prefix, vars).ViaFieldIndex("command", i))
+		err = errs.Also(substitution.ValidateNoReferencesToEntireProhibitedVariables(cmd, prefix, vars).ViaFieldIndex("command", i))
 	}
 	for i, arg := range sas.Args {
-		errs = errs.Also(substitution.ValidateNoReferencesToEntireProhibitedVariables(arg, prefix, vars).ViaFieldIndex("args", i))
+		err = errs.Also(substitution.ValidateNoReferencesToEntireProhibitedVariables(arg, prefix, vars).ViaFieldIndex("args", i))
 	}
 	for _, env := range sas.Env {
-		errs = errs.Also(substitution.ValidateNoReferencesToEntireProhibitedVariables(env.Value, prefix, vars).ViaFieldKey("env", env.Name))
+		err = errs.Also(substitution.ValidateNoReferencesToEntireProhibitedVariables(env.Value, prefix, vars).ViaFieldKey("env", env.Name))
 	}
 	for i, vm := range sas.VolumeMounts {
-		errs = errs.Also(substitution.ValidateNoReferencesToEntireProhibitedVariables(vm.Name, prefix, vars).ViaFieldIndex("volumeMounts", i))
+		err = errs.Also(substitution.ValidateNoReferencesToEntireProhibitedVariables(vm.Name, prefix, vars).ViaFieldIndex("volumeMounts", i))
 	}
 	return errs
 }
 
 // validateStepActionArrayUsage returns an error if the Step contains references to the input array params in fields where these references are prohibited
 func validateStepActionArrayUsage(sas StepActionSpec, prefix string, arrayParamNames sets.String) *apis.FieldError {
-	errs := substitution.ValidateNoReferencesToProhibitedVariables(sas.Image, prefix, arrayParamNames).ViaField("image")
-	errs = errs.Also(substitution.ValidateNoReferencesToProhibitedVariables(sas.Script, prefix, arrayParamNames).ViaField("script"))
+	err = substitution.ValidateNoReferencesToProhibitedVariables(sas.Image, prefix, arrayParamNames).ViaField("image")
+	err = errs.Also(substitution.ValidateNoReferencesToProhibitedVariables(sas.Script, prefix, arrayParamNames).ViaField("script"))
 	for i, cmd := range sas.Command {
-		errs = errs.Also(substitution.ValidateVariableReferenceIsIsolated(cmd, prefix, arrayParamNames).ViaFieldIndex("command", i))
+		err = errs.Also(substitution.ValidateVariableReferenceIsIsolated(cmd, prefix, arrayParamNames).ViaFieldIndex("command", i))
 	}
 	for i, arg := range sas.Args {
-		errs = errs.Also(substitution.ValidateVariableReferenceIsIsolated(arg, prefix, arrayParamNames).ViaFieldIndex("args", i))
+		err = errs.Also(substitution.ValidateVariableReferenceIsIsolated(arg, prefix, arrayParamNames).ViaFieldIndex("args", i))
 	}
 	for _, env := range sas.Env {
-		errs = errs.Also(substitution.ValidateNoReferencesToProhibitedVariables(env.Value, prefix, arrayParamNames).ViaFieldKey("env", env.Name))
+		err = errs.Also(substitution.ValidateNoReferencesToProhibitedVariables(env.Value, prefix, arrayParamNames).ViaFieldKey("env", env.Name))
 	}
 	for i, vm := range sas.VolumeMounts {
-		errs = errs.Also(substitution.ValidateNoReferencesToProhibitedVariables(vm.Name, prefix, arrayParamNames).ViaFieldIndex("volumeMounts", i))
+		err = errs.Also(substitution.ValidateNoReferencesToProhibitedVariables(vm.Name, prefix, arrayParamNames).ViaFieldIndex("volumeMounts", i))
 	}
 	return errs
 }
 
 // validateStepActionVariables returns an error if the StepAction contains references to any unknown variables
 func validateStepActionVariables(ctx context.Context, sas StepActionSpec, prefix string, vars sets.String) *apis.FieldError {
-	errs := substitution.ValidateNoReferencesToUnknownVariables(sas.Image, prefix, vars).ViaField("image")
-	errs = errs.Also(substitution.ValidateNoReferencesToUnknownVariables(sas.Script, prefix, vars).ViaField("script"))
+	err = substitution.ValidateNoReferencesToUnknownVariables(sas.Image, prefix, vars).ViaField("image")
+	err = errs.Also(substitution.ValidateNoReferencesToUnknownVariables(sas.Script, prefix, vars).ViaField("script"))
 	for i, cmd := range sas.Command {
-		errs = errs.Also(substitution.ValidateNoReferencesToUnknownVariables(cmd, prefix, vars).ViaFieldIndex("command", i))
+		err = errs.Also(substitution.ValidateNoReferencesToUnknownVariables(cmd, prefix, vars).ViaFieldIndex("command", i))
 	}
 	for i, arg := range sas.Args {
-		errs = errs.Also(substitution.ValidateNoReferencesToUnknownVariables(arg, prefix, vars).ViaFieldIndex("args", i))
+		err = errs.Also(substitution.ValidateNoReferencesToUnknownVariables(arg, prefix, vars).ViaFieldIndex("args", i))
 	}
 	for _, env := range sas.Env {
-		errs = errs.Also(substitution.ValidateNoReferencesToUnknownVariables(env.Value, prefix, vars).ViaFieldKey("env", env.Name))
+		err = errs.Also(substitution.ValidateNoReferencesToUnknownVariables(env.Value, prefix, vars).ViaFieldKey("env", env.Name))
 	}
 	for i, vm := range sas.VolumeMounts {
-		errs = errs.Also(substitution.ValidateNoReferencesToUnknownVariables(vm.Name, prefix, vars).ViaFieldIndex("volumeMounts", i))
+		err = errs.Also(substitution.ValidateNoReferencesToUnknownVariables(vm.Name, prefix, vars).ViaFieldIndex("volumeMounts", i))
 	}
 	return errs
 }
